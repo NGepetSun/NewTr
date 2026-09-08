@@ -90,3 +90,19 @@ footer{height:54px;display:grid;place-items:center;background:#030305;border-top
 .banned-system{border:1px solid #5c1823;background:#0e0a0b;padding:14px;margin-bottom:14px}.banned-head span{font:800 8px 'Barlow Condensed';letter-spacing:2px;color:#ff5362}.banned-head h4{font:900 20px 'Barlow Condensed';margin:3px 0}.banned-head p{margin:0 0 10px;font-size:10px;color:#888}.banned-add{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end}.banned-add select{width:100%;box-sizing:border-box;background:#101117;border:1px solid #2b2c34;color:#fff;padding:10px;font:500 11px Inter;outline:none}.banned-list{margin-top:10px;border:1px solid #292a31;max-height:220px;overflow:auto}.banned-row{display:grid;grid-template-columns:1fr 20px 1fr 30px;gap:8px;align-items:center;padding:9px 11px;border-bottom:1px solid #1e2026;font-size:10px}.banned-row:last-child{border-bottom:0}.banned-row span{color:#ff5362;text-align:center;font-weight:800}.banned-row button{width:26px;height:26px;border:1px solid #332d31;background:#171116;color:#a98f98;cursor:pointer}
 @media(max-width:760px){.banned-add{grid-template-columns:1fr}}
 @media(max-width:760px){.roster-admin-actions{justify-content:flex-start}.roster-pool-summary{grid-template-columns:1fr 1fr}.roster-pool-summary>div:last-child{grid-column:1/-1}.single-add{grid-template-columns:1fr 110px}.single-add button{grid-column:1/-1}.bulk-add{grid-template-columns:1fr 100px}.bulk-add>div{grid-column:1/-1}.bulk-add textarea{grid-column:1/-1}.bulk-add button{grid-column:1/-1;height:36px}.roster-modal{padding:8px}.roster-modal-panel{max-height:96vh}.roster-modal-body{max-height:calc(96vh - 100px)}}
+
+/* v3 - mixed roster + interactive result bracket */
+.admin-result-board{min-width:980px}
+.admin-result-board .team-row[data-result-win]{cursor:pointer;transition:.15s ease}
+.admin-result-board .team-row[data-result-win]:hover{background:rgba(255,198,43,.12);transform:translateX(2px)}
+.admin-result-board .team-row.winner{background:rgba(255,198,43,.16);outline:1px solid rgba(255,198,43,.45)}
+.roster-card.mixed .players>div,.admin-player{position:relative}
+.roster-card .players em,.admin-player em{font-style:normal;font-size:9px;letter-spacing:1px;margin-left:auto;opacity:.8}
+.roster-card .players em.idp,.admin-player em.idp{color:#f0182d}
+.roster-card .players em.ime,.admin-player em.ime{color:#8b25ff}
+.result-bracket{overflow-x:auto;padding-bottom:15px}
+.bracket-reference-board{overflow-x:auto}
+.banned-list{max-height:none;overflow:visible}
+/* 16-team bracket layout */
+.bracket-reference-board{grid-template-columns:minmax(250px,1.45fr) minmax(210px,1.15fr) minmax(200px,1fr) minmax(200px,1fr) 170px;}
+@media(max-width:1050px){.bracket-reference-board{grid-template-columns:250px 210px 200px 200px 150px;column-gap:42px;overflow-x:auto}}
