@@ -16,7 +16,7 @@ function normalize(raw){
       return {name:v??'',side:i<4?'idp':i<8?'ime':''};
     }):[]
   }));
-  return {teams,scores:x.scores||{},winners:x.winners||{},live:{...d.live,...(x.live||{})},banned:Array.isArray(x.banned)?x.banned.filter(p=>Array.isArray(p)&&p.length===2):[]};
+  return {teams,scores:x.scores||{},winners:x.winners||{},live:{...d.live,...(x.live||{})},banned:(()=>{const b=Array.isArray(x.banned)?x.banned:[]; const flat=[]; b.forEach(v=>{if(Array.isArray(v)) v.forEach(n=>{if(n&&!flat.includes(n))flat.push(n)}); else if(typeof v==='string'&&v&&!flat.includes(v))flat.push(v)}); return flat})()};
 }
 let state;try{state=normalize(JSON.parse(localStorage.getItem(KEY)||'null'))}catch{state=clone(DEFAULT)}
 if(!state||!Array.isArray(state.teams))state=clone(DEFAULT);
@@ -62,16 +62,56 @@ function refCard(m,interactive=false){
   const row=(name,n)=>`<div class="team-row ${name==='TBD'?'tbd':''} ${state.winners[k]===name?'winner':''}" ${interactive&&name!=='TBD'?`data-result-win="${esc(k)}" data-result-team="${esc(name)}"`:''}><span>${esc(name)}</span><b>${s[n]??''}</b></div>`;
   return `<div class="match-card-ref" data-result-match="${esc(k)}">${row(a,0)}${row(b,1)}</div>`;
 }
+function drawPremiumBracketLines(board){
+  if(!board)return;
+  const old=board.querySelector('.bracket-lines-ref');
+  if(old)old.remove();
+  const rounds=[...board.querySelectorAll('.bracket-round')];
+  if(rounds.length<2)return;
+  const br=board.getBoundingClientRect();
+  const svgNS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(svgNS,'svg');
+  svg.classList.add('bracket-lines-ref');
+  svg.setAttribute('aria-hidden','true');
+  svg.setAttribute('width','100%'); svg.setAttribute('height','100%');
+  svg.setAttribute('viewBox',`0 0 ${Math.max(1,br.width)} ${Math.max(1,br.height)}`);
+  svg.innerHTML=`<defs><filter id="bracketGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><linearGradient id="bracketGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8b6b22"/><stop offset=".5" stop-color="#f3d06a"/><stop offset="1" stop-color="#8b6b22"/></linearGradient></defs>`;
+  const rel=(r)=>({x:r.left-br.left,y:r.top-br.top,w:r.width,h:r.height});
+  for(let i=0;i<rounds.length-1;i++){
+    const from=[...rounds[i].querySelectorAll('.match-slot')];
+    const to=[...rounds[i+1].querySelectorAll('.match-slot')];
+    to.forEach((target,j)=>{
+      const sources=from.slice(j*2,j*2+2); if(!sources.length)return;
+      const tr=rel(target.getBoundingClientRect());
+      const tx=tr.x, ty=tr.y+tr.h/2;
+      const sourceRects=sources.map(x=>rel(x.getBoundingClientRect()));
+      const sx=Math.max(...sourceRects.map(r=>r.x+r.w));
+      const midX=sx+(tx-sx)*.5;
+      const color=i===rounds.length-2?'url(#bracketGold)':'#6f727b';
+      const glow=i===rounds.length-2?'url(#bracketGold)':'#8b8f99';
+      const path=(d,cls='')=>{const q=document.createElementNS(svgNS,'path');q.setAttribute('d',d);q.setAttribute('fill','none');q.setAttribute('class',cls);q.setAttribute('stroke',color);q.setAttribute('stroke-width',i===rounds.length-2?'2':'1.5');q.setAttribute('stroke-linecap','round');q.setAttribute('stroke-linejoin','round');q.setAttribute('vector-effect','non-scaling-stroke');return q};
+      sourceRects.forEach(sr=>{
+        const sy=sr.y+sr.h/2;
+        const p=path(`M ${sr.x+sr.w} ${sy} H ${midX} V ${ty} H ${tx}`);
+        p.setAttribute('filter','url(#bracketGlow)'); svg.appendChild(p);
+      });
+      const dot=document.createElementNS(svgNS,'circle');dot.setAttribute('cx',tx);dot.setAttribute('cy',ty);dot.setAttribute('r',i===rounds.length-2?'3':'2');dot.setAttribute('fill',glow);svg.appendChild(dot);
+    });
+  }
+  board.prepend(svg);
+}
 function renderBracket(){
   const ms=matches(),board=document.querySelector('.bracket-reference-board');
   if(board){
     const rounds={};
     ms.filter(m=>m[0]!=='third').forEach(m=>{const r=m[0].match(/^r(\d+)/)?.[1]||'1';(rounds[r]??=[]).push(m)});
     const labels=['ROUND OF 16','QUARTER FINAL','SEMI FINAL','GRAND FINAL'];
-    board.innerHTML=Object.keys(rounds).map((r,idx)=>`<div class="bracket-round round-${idx===0?'q':idx===Object.keys(rounds).length-1?'g':'s'}"><div class="col-title">${rounds[r].length===1?'GRAND FINAL':rounds[r].length===2?'SEMI FINAL':labels[Math.min(idx,labels.length-1)]}</div>${rounds[r].map(m=>`<div class="match-slot" data-match="${m[0]}"></div>`).join('')}</div>`).join('')+`<div class="bracket-lines-ref" aria-hidden="true"></div>`;
+    const keys=Object.keys(rounds).sort((a,b)=>+a-+b);
+    board.innerHTML=keys.map((r,idx)=>`<div class="bracket-round round-${idx===0?'q':idx===keys.length-1?'g':'s'}" data-round="${r}"><div class="col-title">${labels[idx]||'ROUND '+r}</div>${rounds[r].map(m=>`<div class="match-slot" data-match="${m[0]}"></div>`).join('')}</div>`).join('')+`<div class="champion-reference"><span>CHAMPION</span><div>🏆</div><strong id="championName">TBD</strong><small>JUARA 1</small></div>`;
     const third=ms.find(m=>m[0]==='third'); if(third)board.insertAdjacentHTML('beforeend',`<div class="bracket-third-result">${refCard(third)}</div>`);
   }
   document.querySelectorAll('[data-match]').forEach(el=>{const m=ms.find(x=>x[0]===el.dataset.match);if(m)el.innerHTML=refCard(m)});
+  requestAnimationFrame(()=>drawPremiumBracketLines(board));
   const final=ms.filter(m=>m[0]!=='third').at(-1),third=ms.find(m=>m[0]==='third');
   if(!final)return;
   const c=winner(final[0],final[2],final[3]),runner=loser(final[0],final[2],final[3]);
@@ -102,46 +142,90 @@ function updateRosterPoolSummary(){const s=getPool();const el=document.querySele
 function renderParticipantList(){const el=document.querySelector('#participantList');if(!el)return;const s=getPool();const rows=[...s.idp.map((p,i)=>({p,side:'IDP',i})),...s.ime.map((p,i)=>({p,side:'IME',i}))];el.innerHTML=rows.length?rows.map((x,i)=>`<div class="participant-row"><span class="participant-no">${String(i+1).padStart(2,'0')}</span><b>${esc(x.p)}</b><em class="${x.side.toLowerCase()}">${x.side}</em><button type="button" data-remove-player="${x.side}:${x.i}" aria-label="Hapus">×</button></div>`).join(''):`<div class="empty-participants">Belum ada peserta.</div>`}
 function openRosterModal(){document.querySelector('#rosterModal')?.classList.add('show');renderParticipantList();document.querySelector('#rosterName')?.focus()}
 function closeRosterModal(){document.querySelector('#rosterModal')?.classList.remove('show')}
-function isBanned(a,b){return state.banned.some(([x,y])=>(x===a&&y===b)||(x===b&&y===a))}
+function isBanned(a,b){
+  return a!==b&&state.banned.includes(a)&&state.banned.includes(b);
+}
+function teamHasBanned(team,name){
+  return state.banned.includes(name)&&team.some(p=>{
+    const n=typeof p==='object'?p.name:p;
+    return n&&n!==name&&state.banned.includes(n);
+  });
+}
 function distributeToTeams(idpPool,imePool){
   const total=idpPool.length+imePool.length;
-  const teamCount=Math.ceil(total/5);
-  const teams=Array.from({length:teamCount},()=>[]);
-  const A=shuffleArray([...idpPool]),B=shuffleArray([...imePool]);
-  // Proportional composition: e.g. 60/40 over 5 slots => 3 IDP + 2 IME per team.
-  const ratio=idpPool.length/Math.max(1,total);
-  let ai=0,bi=0,conflict=false;
-  for(let i=0;i<teamCount;i++){
-    const remainingTeams=teamCount-i,remainingSlots=teams.reduce((s,t)=>s+(5-t.length),0);
-    let size=i===teamCount-1?Math.min(5,total-i*5):5;
-    let wantIdp=Math.round(size*ratio);
-    wantIdp=Math.max(0,Math.min(size,wantIdp));
-    wantIdp=Math.min(wantIdp,A.length-ai);
-    let wantIme=size-wantIdp;
-    if(wantIme>B.length-bi){wantIme=B.length-bi;wantIdp=size-wantIme;}
-    if(wantIdp>A.length-ai){wantIdp=A.length-ai;}
-    let names=[...A.slice(ai,ai+wantIdp).map(name=>({name,side:'idp'})),...B.slice(bi,bi+wantIme).map(name=>({name,side:'ime'}))];
-    ai+=wantIdp;bi+=wantIme;
-    for(let tries=0;tries<100;tries++){
-      const bad=names.some((p,j)=>names.some((q,k)=>j<k&&isBanned(p.name,q.name)));
-      if(!bad)break;
-      shuffleArray(names);
-      if(tries===99)conflict=true;
+  const teamCount=Math.min(TEAM_COUNT,Math.ceil(total/5));
+  const ratio=total?idpPool.length/total:0;
+  const sizes=Array.from({length:teamCount},(_,i)=>Math.min(5,total-i*5));
+
+  // Target faction counts per team are calculated from the global roster ratio.
+  const targets=sizes.map(size=>Math.round(size*ratio));
+  const idpTarget=targets.reduce((a,b)=>a+b,0);
+  let diff=idpPool.length-idpTarget;
+  if(diff!==0){
+    const order=targets.map((v,i)=>i).sort((a,b)=>diff>0?(sizes[b]-targets[b])-(sizes[a]-targets[a]):targets[b]-targets[a]);
+    for(const i of order){
+      if(diff>0&&targets[i]<sizes[i]){targets[i]++;diff--}
+      else if(diff<0&&targets[i]>0){targets[i]--;diff++}
+      if(diff===0)break;
     }
-    teams[i]=names;
   }
-  return {teams,conflict};
+
+  // A banned list means a clique: every banned player must be in a different team.
+  // If there are more banned players than teams, the constraint is mathematically impossible.
+  const bannedPlayers=[...new Set(state.banned.filter(n=>idpPool.includes(n)||imePool.includes(n)))];
+  const impossible=bannedPlayers.length>teamCount;
+
+  let best=null;
+  for(let attempt=0;attempt<2500;attempt++){
+    const players=[
+      ...shuffleArray(idpPool.map(name=>({name,side:'idp',banned:state.banned.includes(name)}))),
+      ...shuffleArray(imePool.map(name=>({name,side:'ime',banned:state.banned.includes(name)})))
+    ];
+    // Place constrained/banned players first, then fill the remaining slots.
+    shuffleArray(players);
+    players.sort((a,b)=>(b.banned-a.banned));
+
+    const teams=Array.from({length:teamCount},()=>[]);
+    let failed=false;
+    for(const player of players){
+      const candidates=[];
+      for(let i=0;i<teamCount;i++){
+        const team=teams[i];
+        if(team.length>=sizes[i])continue;
+        if(teamHasBanned(team,player.name))continue;
+        const factionCount=team.filter(p=>p.side===player.side).length;
+        const target=targets[i];
+        // Prefer teams that are furthest below their faction target.
+        const factionPenalty=Math.max(0,factionCount-target);
+        const fillPenalty=team.length/sizes[i];
+        candidates.push({i,score:factionPenalty*100+fillPenalty*10+Math.random()});
+      }
+      if(!candidates.length){failed=true;break}
+      candidates.sort((a,b)=>a.score-b.score);
+      teams[candidates[0].i].push(player);
+    }
+    if(failed)continue;
+
+    const conflict=teams.some(team=>team.some((p,j)=>team.some((q,k)=>j<k&&isBanned(p.name,q.name))));
+    const factionError=teams.reduce((sum,team,i)=>sum+Math.abs(team.filter(p=>p.side==='idp').length-targets[i]),0);
+    const candidate={teams,conflict,factionError};
+    if(!best||candidate.factionError<best.factionError)best=candidate;
+    if(!conflict&&factionError===0)return {teams,conflict:false,impossible:false};
+  }
+
+  if(best)return {teams:best.teams,conflict:best.conflict,impossible};
+  return {teams:[],conflict:true,impossible};
 }
 function applyDistribution(idpPool,imePool){
   const res=distributeToTeams(idpPool,imePool);
   state.teams=Array.from({length:TEAM_COUNT},(_,i)=>({name:teamLabel(i),side:'mixed',players:res.teams[i]||[]}));
-  return res.conflict;
+  return res;
 }
 function addParticipants(names,side){
   const clean=names.split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean);
   if(!clean.length)return 0;
   const s=getPool();const pool=side==='idp'?s.idp:s.ime;let added=0;
-  clean.forEach(name=>{if(!pool.includes(name)){pool.push(name);added++}});
+  clean.forEach(name=>{if(!pool.some(n=>n.toLowerCase()===name.toLowerCase())){pool.push(name);added++}});
   const idp=side==='idp'?pool:s.idp,ime=side==='ime'?pool:s.ime;
   applyDistribution(idp,ime);
   save();renderAll();renderParticipantList();renderBannedOptions();return added;
@@ -159,15 +243,20 @@ function shufflePlayers(){
   if(total<5||idp.length===0||ime.length===0){
     alert('Kocok membutuhkan minimal 5 peserta dan roster IDP + IME harus sama-sama terisi.');return;
   }
-  const conflict=applyDistribution(idp,ime);
+  // Shuffle remains available even when all 16 teams (80 slots) are full.
+  const res=applyDistribution(idp,ime);
   state.winners={};state.scores={};save();renderAll();renderParticipantList();
   const note=document.querySelector('#shuffleNote');
   if(note){
     const idpPer=Math.round(5*idp.length/total),imePer=5-idpPer;
-    note.textContent=conflict
-      ? `Shuffle selesai. Komposisi mengikuti rasio roster (sekitar ${idpPer} IDP + ${imePer} IME / team), tetapi ada pasangan banned yang terpaksa bertemu.`
-      : `Shuffle selesai. Komposisi mengikuti rasio roster: ${idp.length}/${total} IDP dan ${ime.length}/${total} IME. Contoh rasio 60/40 = 3 IDP + 2 IME / team.`;
-    note.classList.toggle('success',!conflict);note.classList.toggle('warn',conflict);
+    if(res.impossible){
+      note.textContent=`Shuffle selesai, tetapi ${state.banned.filter(n=>idp.includes(n)||ime.includes(n)).length} player banned melebihi ${Math.min(TEAM_COUNT,Math.ceil(total/5))} team yang tersedia. Sebagian harus bertemu karena secara matematis tidak mungkin dipisahkan semua.`;
+    }else if(res.conflict){
+      note.textContent=`Shuffle selesai, tetapi constraint banned belum dapat dipenuhi pada percobaan ini. Coba KOCOK lagi.`;
+    }else{
+      note.textContent=`Shuffle selesai. Komposisi mengikuti rasio roster: sekitar ${idpPer} IDP + ${imePer} IME / team. Semua player di Banned Player dipisahkan agar tidak satu team.`;
+    }
+    note.classList.toggle('success',!res.conflict&&!res.impossible);note.classList.toggle('warn',res.conflict||res.impossible);
   }
 }
 function renderResults(){
@@ -178,15 +267,17 @@ function renderResults(){
   const roundKeys=Object.keys(rounds).sort((a,b)=>+a-+b);
   el.className='result-grid result-bracket';
   el.innerHTML=`<div class="bracket-reference-board admin-result-board">
-    ${roundKeys.map((r,idx)=>`<div class="bracket-round round-${idx===0?'q':idx===roundKeys.length-1?'g':'s'}"><div class="col-title">${idx===roundKeys.length-1?'GRAND FINAL':idx===roundKeys.length-2?'SEMI FINAL':idx===roundKeys.length-3?'QUARTER FINAL':'ROUND OF 16'}</div>${rounds[r].map(m=>`<div class="match-slot">${refCard(m,true)}</div>`).join('')}</div>`).join('')}
-    <div class="bracket-lines-ref" aria-hidden="true"></div>
+    ${roundKeys.map((r,idx)=>`<div class="bracket-round round-${idx===0?'q':idx===roundKeys.length-1?'g':'s'}" data-round="${r}"><div class="col-title">${idx===roundKeys.length-1?'GRAND FINAL':idx===roundKeys.length-2?'SEMI FINAL':idx===roundKeys.length-3?'QUARTER FINAL':'ROUND OF 16'}</div>${rounds[r].map(m=>`<div class="match-slot">${refCard(m,true)}</div>`).join('')}</div>`).join('')}
+    <div class="champion-reference"><span>CHAMPION</span><div>🏆</div><strong>TBD</strong><small>JUARA 1</small></div>
   </div>`;
+  requestAnimationFrame(()=>drawPremiumBracketLines(el.querySelector('.bracket-reference-board')));
   el.querySelectorAll('[data-result-win]').forEach(b=>b.onclick=()=>{
     const k=b.dataset.resultWin,t=b.dataset.resultTeam;if(!t||t==='TBD')return;
     state.winners[k]=state.winners[k]===t?'':t;invalidate(k);save();renderAll();
   });
 }
 
+window.addEventListener('resize',()=>{const b=document.querySelector('.bracket-reference-board');if(b)drawPremiumBracketLines(b)});
 function renderStats(){const el=document.querySelector('#adminStats');if(!el)return;const played=Object.keys(state.winners).length,ms=matches(),gf=ms.find(m=>m[0]==='r4m1');const pools=getPool();const champion=gf?winner(gf[0],gf[2],gf[3]):'TBD';el.innerHTML=`<div><span>IDP PARTICIPANTS</span><b>${pools.idp.length}</b></div><div><span>IME PARTICIPANTS</span><b>${pools.ime.length}</b></div><div><span>TEAMS</span><b>${state.teams.length}</b></div><div><span>MATCHES PLAYED</span><b>${played}</b></div><div><span>CHAMPION</span><b>${esc(champion)}</b></div>`}
 function invalidate(k){
   const ms=matches(),idx=ms.findIndex(m=>m[0]===k);
@@ -198,41 +289,49 @@ function bindResults(){document.querySelectorAll('[data-win]').forEach(b=>b.oncl
 function bindAdminTeamInputs(){/* roster is managed from the single modal */}
 function renderLive(){const idp=document.querySelector('#idpThumb'),ime=document.querySelector('#imeThumb');if(idp)idp.onclick=()=>state.live.idp&&window.open(state.live.idp,'_blank');if(ime)ime.onclick=()=>state.live.ime&&window.open(state.live.ime,'_blank');const a=document.querySelector('#admin-live-idp'),b=document.querySelector('#admin-live-ime');if(a)a.value=state.live.idp;if(b)b.value=state.live.ime}
 function renderBannedOptions(){
-  const a=document.querySelector('#bannedPlayerA'),b=document.querySelector('#bannedPlayerB');if(!a||!b)return;
-  const s=getPool();const list=[...s.idp.map(n=>({n,f:'IDP'})),...s.ime.map(n=>({n,f:'IME'}))];
-  const opts=list.map(x=>`<option value="${esc(x.n)}">${esc(x.n)} (${x.f})</option>`).join('');
-  const keepA=a.value,keepB=b.value;
-  a.innerHTML=`<option value="">PILIH PLAYER A</option>${opts}`;
-  b.innerHTML=`<option value="">PILIH PLAYER B</option>${opts}`;
-  if(list.some(x=>x.n===keepA))a.value=keepA;
-  if(list.some(x=>x.n===keepB))b.value=keepB;
+  const input=document.querySelector('#bannedPlayerSearch');
+  if(input && !input.value) input.placeholder='Cari player... tekan Enter untuk banned';
 }
 function renderBannedList(){
   const el=document.querySelector('#bannedList');if(!el)return;
-  el.innerHTML=state.banned.length?state.banned.map((pair,i)=>`<div class="banned-row"><b>${esc(pair[0])}</b><span>✕</span><b>${esc(pair[1])}</b><button type="button" data-remove-banned="${i}" aria-label="Hapus">×</button></div>`).join(''):`<div class="empty-participants">Belum ada pasangan banned.</div>`;
+  el.innerHTML=state.banned.length
+    ? state.banned.map((name,i)=>`<div class="banned-row"><b>${esc(name)}</b><span>BANNED</span><button type="button" data-remove-banned="${i}" aria-label="Hapus">×</button></div>`).join('')
+    : `<div class="empty-participants">Belum ada player banned.</div>`;
 }
-function addBannedPair(a,b){
-  if(!a||!b||a===b)return false;
-  if(isBanned(a,b))return false;
-  state.banned.push([a,b]);
-  const s=getPool();applyDistribution(s.idp,s.ime);
-  save();renderAll();renderBannedList();renderBannedOptions();return true;
-}
-function removeBannedPair(index){
-  state.banned.splice(+index,1);
-  const s=getPool();applyDistribution(s.idp,s.ime);
-  save();renderAll();renderBannedList();renderBannedOptions();
-}
-function setupBannedSystem(){
-  document.querySelector('#addBanned')?.addEventListener('click',()=>{
-    const a=document.querySelector('#bannedPlayerA')?.value,b=document.querySelector('#bannedPlayerB')?.value;
-    if(!a||!b||a===b){alert('Pilih dua peserta yang berbeda.');return}
-    if(!addBannedPair(a,b))alert('Pasangan ini sudah ada di banned system.');
-    else{const sa=document.querySelector('#bannedPlayerA'),sb=document.querySelector('#bannedPlayerB');if(sa)sa.value='';if(sb)sb.value=''}
+function addBannedPlayers(raw){
+  const names=String(raw||'').split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean);
+
+  let added=0;
+  const pool=getPool(),all=[...pool.idp,...pool.ime];
+  names.forEach(name=>{
+    const exact=all.find(n=>n.toLowerCase()===name.toLowerCase());
+    if(exact&&!state.banned.includes(exact)){state.banned.push(exact);added++}
   });
-  document.querySelector('#bannedList')?.addEventListener('click',e=>{const btn=e.target.closest('[data-remove-banned]');if(!btn)return;removeBannedPair(btn.dataset.removeBanned)});
+  save();renderBannedList();renderBannedOptions();
+  return added;
 }
-function renderAll(){renderBracket();renderRoster();renderAdminTeams();renderResults();renderStats();renderLive();renderBannedOptions();renderBannedList()}
+function removeBannedPlayer(index){
+  state.banned.splice(+index,1);
+  save();renderBannedList();renderBannedOptions();
+}
+
+function setupBannedSystem(){
+  const input=document.querySelector('#bannedPlayerSearch');
+  input?.addEventListener('keydown',e=>{
+    if(e.key!=='Enter')return;
+    e.preventDefault();
+    const value=input.value.trim();if(!value)return;
+    const added=addBannedPlayers(value);
+    input.value='';
+    if(!added)alert('Player tersebut sudah ada di banned list.');
+  });
+  document.querySelector('#bannedList')?.addEventListener('click',e=>{
+    const btn=e.target.closest('[data-remove-banned]');if(!btn)return;
+    removeBannedPlayer(btn.dataset.removeBanned);
+  });
+}
+function updateShuffleButton(){const b=document.querySelector('#shufflePlayers');if(!b)return;const s=getPool(),total=s.idp.length+s.ime.length;b.disabled=false;b.title=total>=TEAM_COUNT*5?'Roster sudah 80 player — KOCOK tetap bisa digunakan untuk mengacak ulang.':'';b.textContent='⤨ KOCOK PLAYER'}
+function renderAll(){renderBracket();renderRoster();renderAdminTeams();renderResults();renderStats();renderLive();renderBannedOptions();renderBannedList();updateShuffleButton()}
 function setupNav(){const nav=document.querySelector('#mainNav'),menu=document.querySelector('#menu');if(menu&&nav)menu.onclick=()=>nav.classList.toggle('open');document.querySelectorAll('#mainNav a').forEach(a=>a.onclick=()=>nav?.classList.remove('open'))}
 function setupRosterModal(){
   const modal=document.querySelector('#rosterModal');if(!modal)return;
