@@ -1,4 +1,4 @@
-const DEFAULT={teams:Array.from({length:8},(_,i)=>({name:`${i<4?'IDP':'IME'} TEAM ${String.fromCharCode(65+i%4)}`,side:i<4?'idp':'ime',players:Array.from({length:5},(_,p)=>`${i<4?'IDP':'IME'} Player ${p+1}`})),scores:{},winners:{},live:{idp:'',ime:''}};
+const DEFAULT={teams:Array.from({length:8},(_,i)=>({name:`${i<4?'IDP':'IME'} TEAM ${String.fromCharCode(65+i%4)}`,side:i<4?'idp':'ime',players:Array.from({length:5},(_,p)=>`${i<4?'IDP':'IME'} Player ${p+1}`)})),scores:{},winners:{},live:{idp:'',ime:''}};
 const KEY='mapendos-v8-pages';
 const clone=o=>JSON.parse(JSON.stringify(o));
 const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
@@ -50,8 +50,9 @@ function addParticipants(names,side){
   save();renderAll();renderParticipantList();return added;
 }
 function removeParticipant(side,index){
-  const s=getPool(),arr=side==='idp'?s.idp:s.ime;arr.splice(+index,1);
-  for(let team=0;team<4;team++)state.teams[team+(side==='IME'?4:0)].players=Array.from({length:5},(_,j)=>arr[team*5+j]||'TBD');
+  const f=String(side).toLowerCase();
+  const s=getPool(),arr=f==='idp'?s.idp:s.ime;arr.splice(+index,1);
+  for(let team=0;team<4;team++)state.teams[team+(f==='ime'?4:0)].players=Array.from({length:5},(_,j)=>arr[team*5+j]||'TBD');
   save();renderAll();renderParticipantList();
 }
 function shuffleArray(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}return arr}
