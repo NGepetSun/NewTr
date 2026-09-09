@@ -372,7 +372,7 @@ function renderKillsRanking(){
     return `<article class="kill-card ${cls}"><div class="kill-card-top"><span class="kill-rank">${String(i+1).padStart(2,'0')}</span><span class="kill-kpg">${p.kills} TOTAL KILL</span></div><div class="kill-avatar"><span>${esc(initials||'?')}</span></div><div class="kill-card-bottom"><div><strong>${esc(p.name)}</strong><small>${esc(p.team||'MAPENDOS')} · ${esc(side||'MIXED')}</small></div><b>${p.kills}</b></div></article>`;
   }).join(''):`<div class="kills-empty">Belum ada data kills.</div>`;
   const meta=document.querySelector('#killsMatchMeta');if(meta)meta.innerHTML=`<span>${esc(k.weekLabel||'WEEK 1')}</span><b>${esc(k.seasonLabel||'REGULAR SEASON')}</b><em>${esc(k.matchLabel||'ALL MATCHES')}</em>`;
-  const rosterList=document.querySelector('#killsRosterList');if(rosterList)rosterList.innerHTML=getAllRosterPlayers().map(p=>`<option value="${esc(p.name)}">${esc(p.team)} · ${(p.side||'').toUpperCase()}</option>`).join('');
+
   const table=document.querySelector('#killsAdminTable');
   if(table){const matches=getKillsMatches();table.innerHTML=matches.length?matches.map((m,mi)=>`<div class="kills-match-block"><div class="kills-match-head"><div><span>MATCH ${mi+1}</span><b>${esc(m.matchLabel)}</b></div><button type="button" data-remove-kills-match="${mi}">HAPUS MATCH</button></div><div class="kills-match-entries">${(m.entries||[]).map((p,pi)=>`<div class="kills-admin-row"><span>0${pi+1}</span><div><b>${esc(p.name)}</b><small>${esc(p.team)} · ${(p.side||'').toUpperCase()}</small></div><strong>${p.kills}</strong><button type="button" data-remove-kills-entry="${mi}:${pi}">×</button></div>`).join('')}</div></div>`).join(''):`<div class="kills-empty">Belum ada match. Tambahkan 1–5 player per match.</div>`}
   const a=document.querySelector('#killsMatchLabel');if(a)a.value=k.matchLabel||'';const w=document.querySelector('#killsWeekLabel');if(w)w.value=k.weekLabel||'';const se=document.querySelector('#killsSeasonLabel');if(se)se.value=k.seasonLabel||'';
@@ -380,7 +380,7 @@ function renderKillsRanking(){
 function bindKillsAdmin(){
   const add=()=>{
     const mi=document.querySelector('#killsInputMatch'),pi=document.querySelector('#killsInputPlayer'),ki=document.querySelector('#killsInputKills'),matchLabel=mi?.value.trim()||'MATCH 1',player=rosterLookup(pi?.value),raw=String(ki?.value||'').trim(),kills=Math.max(0,Math.floor(Number(raw)||0));
-    if(!player){alert('Player tidak ditemukan di roster.');return} if(!raw){alert('Masukkan jumlah kill.');return}
+    if(!pi?.value.trim()){alert('Ketik nama player.');return} if(!player){alert('Nama player tidak cocok dengan roster. Ketik nama sesuai roster.');return} if(!raw){alert('Masukkan jumlah kill.');return}
     const matches=getKillsMatches();let match=matches.find(m=>m.matchLabel.toLowerCase()===matchLabel.toLowerCase());
     if(!match){match={matchLabel,entries:[]};matches.push(match)}
     if(match.entries.some(e=>e.name.toLowerCase()===player.name.toLowerCase())){alert('Player tersebut sudah ada di match ini.');return}
