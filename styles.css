@@ -135,3 +135,44 @@ footer{height:54px;display:grid;place-items:center;background:#030305;border-top
 .bracket-reference-board .champion-reference{position:relative!important;grid-column:5;grid-row:1;right:auto!important;top:auto!important;transform:none!important;align-self:center!important;justify-self:start!important;width:190px!important;min-width:190px!important;margin:0!important;}
 @media(max-width:1050px){.bracket-reference-board{min-width:1280px!important;grid-template-columns:260px 220px 220px 230px 190px;column-gap:28px;overflow-x:auto!important}.bracket-reference-board .champion-reference{position:relative!important;right:auto!important;top:auto!important;transform:none!important;width:190px!important;min-width:190px!important;}}
 @media(max-width:720px){.bracket-reference-board{min-width:1250px!important;display:grid!important;grid-template-columns:230px 230px 230px 230px 180px!important;column-gap:22px!important;overflow-x:auto!important}.bracket-reference-board .champion-reference{position:relative!important;grid-column:5!important;grid-row:1!important;right:auto!important;top:auto!important;transform:none!important;width:180px!important;min-width:180px!important;align-self:center!important;margin:0!important;}}
+
+/* ===== KILLS RANKING — LAST MATCH ===== */
+.kills-screen{position:relative;min-height:calc(100vh - 90px);overflow:hidden;background:radial-gradient(circle at 50% 12%,rgba(34,128,255,.18),transparent 34%),linear-gradient(135deg,#f3f5f7 0%,#ffffff 48%,#f2f4f7 100%);color:#11151c;padding:56px clamp(18px,5vw,76px) 70px;isolation:isolate}
+.kills-screen:before{content:"";position:absolute;left:-10%;top:-20%;width:52%;height:130%;background:linear-gradient(132deg,transparent 0 42%,rgba(17,124,242,.98) 42.2% 46%,rgba(9,60,126,.96) 46.2% 49%,transparent 49.2%);transform:rotate(-2deg);z-index:-1;opacity:.98}
+.kills-screen:after{content:"";position:absolute;right:-12%;bottom:-26%;width:54%;height:90%;background:linear-gradient(128deg,transparent 0 47%,rgba(226,20,42,.98) 47.2% 52%,rgba(124,8,22,.96) 52.2% 55%,transparent 55.2%);z-index:-1}
+.kills-hero{max-width:1180px;margin:0 auto;text-align:center;position:relative}
+.kills-brand-mark{width:54px;height:54px;margin:0 auto 10px;display:grid;place-items:center;border:3px solid #202631;border-radius:50%;font:900 29px/1 'Barlow Condensed';background:linear-gradient(145deg,#fff,#dce2e9);box-shadow:0 10px 28px rgba(0,0,0,.14)}
+.kills-kicker{font:800 10px 'Barlow Condensed';letter-spacing:4px;color:#555e6b}
+.kills-hero h1{margin:4px 0 2px;font:900 clamp(55px,9vw,112px)/.84 'Barlow Condensed';letter-spacing:1px;color:#1585ef;text-shadow:2px 3px 0 rgba(12,72,155,.1)}
+.kills-hero h1 span{background:linear-gradient(180deg,#1489f5 20%,#8a1c8c 58%,#ec182f 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.kills-hero p{margin:14px auto 0;color:#69727e;font:600 11px Inter;letter-spacing:.2px}
+.kills-meta{display:flex;justify-content:center;align-items:center;gap:0;margin:24px auto 0;max-width:650px;filter:drop-shadow(0 8px 15px rgba(0,0,0,.08))}
+.kills-meta span,.kills-meta b,.kills-meta em{min-height:40px;display:flex;align-items:center;justify-content:center;padding:0 24px;font:900 14px 'Barlow Condensed';letter-spacing:1px;font-style:normal}
+.kills-meta span{background:#1688ef;color:#fff;clip-path:polygon(0 0,100% 0,94% 100%,0 100%)}
+.kills-meta b{background:#222832;color:#fff;margin-left:-12px;padding-left:30px}
+.kills-meta em{background:#ed1832;color:#fff;margin-left:-12px;clip-path:polygon(7% 0,100% 0,100% 100%,0 100%);padding-left:30px}
+.kills-ranking-grid{max-width:1180px;margin:42px auto 0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px;align-items:end}
+.kill-card{position:relative;min-width:0;overflow:hidden;background:linear-gradient(180deg,#f8f9fa,#dce1e6);border:3px solid #fff;box-shadow:0 18px 38px rgba(22,31,43,.22);clip-path:polygon(0 0,100% 0,100% 95%,94% 100%,0 100%);transform:translateY(0);transition:.2s ease}
+.kill-card:hover{transform:translateY(-6px);box-shadow:0 24px 45px rgba(22,31,43,.3)}
+.kill-card-top{height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:#1487ef;color:#fff;font:900 11px 'Barlow Condensed';letter-spacing:1px}
+.kill-rank{font-size:16px}.kill-kpg{font-size:12px}
+.kill-avatar{height:265px;display:grid;place-items:center;position:relative;background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.9),transparent 34%),linear-gradient(145deg,#cfd5db,#7c8793);overflow:hidden}
+.kill-avatar:before{content:"";position:absolute;width:125px;height:125px;border-radius:50%;top:43px;background:linear-gradient(145deg,#313943,#11161c);box-shadow:0 0 0 10px rgba(255,255,255,.16)}
+.kill-avatar:after{content:"";position:absolute;width:230px;height:170px;border-radius:55% 55% 8% 8%;bottom:-48px;background:linear-gradient(145deg,#273341,#0d131b);box-shadow:0 -10px 30px rgba(0,0,0,.15)}
+.kill-avatar span{position:relative;z-index:2;color:#fff;font:900 36px 'Barlow Condensed';text-shadow:0 3px 12px #000;margin-top:-4px}
+.kill-card-bottom{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;background:#080b10;color:#fff}
+.kill-card-bottom strong{display:block;font:900 20px/1 'Barlow Condensed';letter-spacing:.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kill-card-bottom small{display:block;margin-top:4px;color:#9199a3;font:700 8px Inter;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kill-card-bottom>b{font:900 29px 'Barlow Condensed';color:#fff}
+.kill-card.rank-1{transform:translateY(-10px) scale(1.015);z-index:2}.kill-card.rank-1:hover{transform:translateY(-16px) scale(1.015)}
+.kill-card.rank-1 .kill-card-top{background:linear-gradient(90deg,#0879e9,#e31935)}
+.kill-card.rank-2 .kill-card-top{background:#1184eb}.kill-card.rank-3 .kill-card-top{background:#187dd5}.kill-card.rank-other .kill-card-top{background:#2476bd}
+.kills-empty{grid-column:1/-1;padding:55px 20px;text-align:center;background:rgba(255,255,255,.82);border:1px solid #d8dde3;color:#6e7680;font:700 12px Inter}
+.kills-footer-note{max-width:1180px;margin:34px auto 0;display:flex;align-items:center;gap:14px;padding:13px 16px;border-left:4px solid #e31b35;background:rgba(255,255,255,.78);box-shadow:0 8px 25px rgba(0,0,0,.07)}
+.kills-footer-note span{font:900 9px 'Barlow Condensed';letter-spacing:2px;color:#727a84}.kills-footer-note b{font:900 14px 'Barlow Condensed';color:#202631}.kills-footer-note small{margin-left:auto;color:#8a9199;font:600 9px Inter}
+
+/* Kills ranking admin controls */
+.kills-admin-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}.kills-admin-meta label{display:grid;gap:6px;color:#8e9198;font:800 9px 'Barlow Condensed';letter-spacing:1.5px}.kills-admin-meta input{width:100%;box-sizing:border-box;background:#101117;border:1px solid #2c2e36;color:#fff;padding:11px 12px;outline:none;font:600 11px Inter}.kills-admin-panel{border:1px solid #292c34;background:#0d0f14;overflow:hidden}.kills-admin-head{display:grid;grid-template-columns:1fr 110px;padding:11px 13px;background:#151821;color:#777e89;font:800 9px 'Barlow Condensed';letter-spacing:2px}.kills-admin-row{display:grid;grid-template-columns:35px 1fr 110px;gap:10px;align-items:center;padding:9px 13px;border-top:1px solid #20232b}.kills-admin-row>span{color:#5f6671;font:800 9px 'Barlow Condensed'}.kills-admin-row b{display:block;color:#fff;font:800 12px Inter}.kills-admin-row small{display:block;color:#777f8b;margin-top:2px;font:500 8px Inter;letter-spacing:.5px}.kills-admin-row input{width:100%;box-sizing:border-box;background:#101117;border:1px solid #343741;color:#fff;padding:9px;text-align:center;font:900 14px 'Barlow Condensed';outline:none}.kills-admin-row input:focus{border-color:#ffc62b;box-shadow:0 0 0 2px rgba(255,198,43,.08)}
+
+@media(max-width:900px){.kills-ranking-grid{grid-template-columns:repeat(3,1fr)}.kill-card.rank-1{transform:translateY(0)}.kills-meta span,.kills-meta b,.kills-meta em{padding:0 14px}.kills-footer-note{flex-wrap:wrap}.kills-footer-note small{margin-left:0;width:100%}}
+@media(max-width:620px){.kills-screen{padding:38px 12px 50px}.kills-hero h1{font-size:64px}.kills-meta{width:100%;}.kills-meta span,.kills-meta b,.kills-meta em{font-size:11px;padding:0 9px;flex:1}.kills-ranking-grid{grid-template-columns:1fr 1fr;gap:10px;margin-top:30px}.kill-card.rank-1{grid-column:1/-1;max-width:280px;width:100%;justify-self:center}.kill-card.rank-1 .kill-avatar{height:250px}.kill-avatar{height:220px}.kill-card-bottom strong{font-size:17px}.kill-card-bottom>b{font-size:24px}.kills-admin-meta{grid-template-columns:1fr}.kills-admin-head{grid-template-columns:1fr 90px}.kills-admin-row{grid-template-columns:28px 1fr 90px}}

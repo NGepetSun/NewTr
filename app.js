@@ -1,5 +1,5 @@
 const TEAM_COUNT=16;
-const DEFAULT={teams:Array.from({length:TEAM_COUNT},(_,i)=>({name:`MPD ${String.fromCharCode(65+i)}`,side:'mixed',players:[]})),scores:{},winners:{},live:{idp:'',ime:''},banned:[]};
+const DEFAULT={teams:Array.from({length:TEAM_COUNT},(_,i)=>({name:`MPD ${String.fromCharCode(65+i)}`,side:'mixed',players:[]})),scores:{},winners:{},live:{idp:'',ime:''},banned:[],killsRanking:{matchLabel:'LAST MATCH',weekLabel:'WEEK 1',seasonLabel:'REGULAR SEASON',entries:[]}};
 const KEY='mapendos-v9-pages';
 const API_STATE='/api/state';
 let remoteReady=false;
@@ -19,7 +19,9 @@ function normalize(raw){
       return {name:v??'',side:i<4?'idp':i<8?'ime':''};
     }):[]
   }));
-  return {teams,scores:x.scores||{},winners:x.winners||{},live:{...d.live,...(x.live||{})},banned:(()=>{const b=Array.isArray(x.banned)?x.banned:[]; const flat=[]; b.forEach(v=>{if(Array.isArray(v)) v.forEach(n=>{if(n&&!flat.includes(n))flat.push(n)}); else if(typeof v==='string'&&v&&!flat.includes(v))flat.push(v)}); return flat})()};
+  const kr=x.killsRanking&&typeof x.killsRanking==='object'?x.killsRanking:{};
+  const entries=Array.isArray(kr.entries)?kr.entries.map(v=>({name:String(v?.name??''),kills:Math.max(0,Number(v?.kills)||0),team:String(v?.team??''),side:String(v?.side??'')})).filter(v=>v.name):[];
+  return {teams,scores:x.scores||{},winners:x.winners||{},live:{...d.live,...(x.live||{})},banned:(()=>{const b=Array.isArray(x.banned)?x.banned:[]; const flat=[]; b.forEach(v=>{if(Array.isArray(v)) v.forEach(n=>{if(n&&!flat.includes(n))flat.push(n)}); else if(typeof v==='string'&&v&&!flat.includes(v))flat.push(v)}); return flat})(),killsRanking:{matchLabel:String(kr.matchLabel??d.killsRanking.matchLabel),weekLabel:String(kr.weekLabel??d.killsRanking.weekLabel),seasonLabel:String(kr.seasonLabel??d.killsRanking.seasonLabel),entries}};
 }
 let state;try{state=normalize(JSON.parse(localStorage.getItem(KEY)||'null'))}catch{state=clone(DEFAULT)}
 if(!state||!Array.isArray(state.teams))state=clone(DEFAULT);
@@ -331,6 +333,51 @@ function renderResults(){
 }
 
 window.addEventListener('resize',()=>{const b=document.querySelector('.bracket-reference-board');if(b)drawPremiumBracketLines(b)});
+function getAllRosterPlayers(){
+  const rows=[];
+  state.teams.forEach(team=>(team.players||[]).forEach(player=>{
+    const name=typeof player==='object'?player.name:player;
+    const side=typeof player==='object'?player.side:'';
+    if(!name||name==='TBD')return;
+    rows.push({name,side:side||'mixed',team:team.name||'TBD'});
+  }));
+  return rows;
+}
+function ensureKillsEntries(){
+  if(!state.killsRanking||typeof state.killsRanking!=='object')state.killsRanking=clone(DEFAULT.killsRanking);
+  const old=Array.isArray(state.killsRanking.entries)?state.killsRanking.entries:[];
+  const byName=new Map(old.map(e=>[String(e.name).toLowerCase(),e]));
+  state.killsRanking.entries=getAllRosterPlayers().map(p=>{
+    const old=byName.get(p.name.toLowerCase());
+    return {name:p.name,side:p.side,team:p.team,kills:Math.max(0,Number(old?.kills)||0)};
+  });
+}
+function renderKillsRanking(){
+  const el=document.querySelector('#killsRankingBoard');if(!el)return;
+  ensureKillsEntries();
+  const k=state.killsRanking;
+  const ranked=k.entries.filter(e=>e.name).sort((a,b)=>b.kills-a.kills||a.name.localeCompare(b.name));
+  const top=ranked.slice(0,5);
+  el.innerHTML=top.length?top.map((p,i)=>{
+    const side=(p.side||'').toUpperCase();
+    const initials=p.name.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();
+    const cls=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other';
+    return `<article class="kill-card ${cls}"><div class="kill-card-top"><span class="kill-rank">${String(i+1).padStart(2,'0')}</span><span class="kill-kpg">${p.kills.toFixed(2)} KPG</span></div><div class="kill-avatar"><span>${esc(initials||'?')}</span></div><div class="kill-card-bottom"><div><strong>${esc(p.name)}</strong><small>${esc(p.team||'MAPENDOS')} · ${esc(side)}</small></div><b>${p.kills}</b></div></article>`;
+  }).join(''):`<div class="kills-empty">Belum ada data kills untuk LAST MATCH.</div>`;
+  const meta=document.querySelector('#killsMatchMeta');if(meta)meta.innerHTML=`<span>${esc(k.weekLabel||'WEEK 1')}</span><b>${esc(k.seasonLabel||'REGULAR SEASON')}</b><em>${esc(k.matchLabel||'LAST MATCH')}</em>`;
+  const adminTable=document.querySelector('#killsAdminTable');
+  if(adminTable){
+    adminTable.innerHTML=k.entries.length?k.entries.map((p,i)=>`<div class="kills-admin-row"><span>${String(i+1).padStart(2,'0')}</span><div><b>${esc(p.name)}</b><small>${esc(p.team)} · ${(p.side||'').toUpperCase()}</small></div><input type="number" min="0" step="1" value="${p.kills}" data-kills-player="${esc(p.name)}" aria-label="Kills ${esc(p.name)}"></div>`).join(''):`<div class="kills-empty">Belum ada roster player.</div>`;
+  }
+  const a=document.querySelector('#killsMatchLabel');if(a)a.value=k.matchLabel||'';
+  const w=document.querySelector('#killsWeekLabel');if(w)w.value=k.weekLabel||'';
+  const se=document.querySelector('#killsSeasonLabel');if(se)se.value=k.seasonLabel||'';
+}
+function bindKillsAdmin(){
+  const saveMeta=()=>{if(!state.killsRanking)state.killsRanking=clone(DEFAULT.killsRanking);state.killsRanking.matchLabel=document.querySelector('#killsMatchLabel')?.value.trim()||'LAST MATCH';state.killsRanking.weekLabel=document.querySelector('#killsWeekLabel')?.value.trim()||'WEEK 1';state.killsRanking.seasonLabel=document.querySelector('#killsSeasonLabel')?.value.trim()||'REGULAR SEASON';ensureKillsEntries();save();renderKillsRanking();};
+  document.querySelector('#saveKillsRanking')?.addEventListener('click',saveMeta);
+  document.querySelector('#killsAdminTable')?.addEventListener('change',e=>{const input=e.target.closest('[data-kills-player]');if(!input)return;ensureKillsEntries();const name=input.dataset.killsPlayer;const item=state.killsRanking.entries.find(x=>x.name===name);if(item){item.kills=Math.max(0,Math.floor(Number(input.value)||0));save();renderKillsRanking();}});
+}
 function renderStats(){const el=document.querySelector('#adminStats');if(!el)return;const played=Object.keys(state.winners).length,ms=matches(),gf=ms.find(m=>m[0]==='r4m1');const pools=getPool();const champion=gf?winner(gf[0],gf[2],gf[3]):'TBD';el.innerHTML=`<div><span>IDP PARTICIPANTS</span><b>${pools.idp.length}</b></div><div><span>IME PARTICIPANTS</span><b>${pools.ime.length}</b></div><div><span>TEAMS</span><b>${state.teams.length}</b></div><div><span>MATCHES PLAYED</span><b>${played}</b></div><div><span>CHAMPION</span><b>${esc(champion)}</b></div>`}
 function invalidate(k){
   const ms=matches(),idx=ms.findIndex(m=>m[0]===k);
@@ -384,7 +431,7 @@ function setupBannedSystem(){
   });
 }
 function updateShuffleButton(){const b=document.querySelector('#shufflePlayers');if(!b)return;const s=getPool(),total=s.idp.length+s.ime.length;b.disabled=false;b.title=total>=TEAM_COUNT*5?'Roster sudah 80 player — KOCOK tetap bisa digunakan untuk mengacak ulang.':'';b.textContent='⤨ KOCOK PLAYER'}
-function renderAll(){renderBracket();renderRoster();renderAdminTeams();renderResults();renderStats();renderLive();renderBannedOptions();renderBannedList();updateShuffleButton()}
+function renderAll(){renderBracket();renderRoster();renderAdminTeams();renderResults();renderStats();renderLive();renderBannedOptions();renderBannedList();updateShuffleButton();renderKillsRanking()}
 function setupNav(){const nav=document.querySelector('#mainNav'),menu=document.querySelector('#menu');if(menu&&nav)menu.onclick=()=>nav.classList.toggle('open');document.querySelectorAll('#mainNav a').forEach(a=>a.onclick=()=>nav?.classList.remove('open'))}
 function setupRosterModal(){
   const modal=document.querySelector('#rosterModal');if(!modal)return;
@@ -407,6 +454,6 @@ function setupAdmin(){
   const imp=document.querySelector('#importData');if(imp)imp.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=normalize(JSON.parse(r.result));save();renderAll();renderParticipantList()}catch{alert('JSON tidak valid')}};r.readAsText(f)};
   const reset=document.querySelector('#resetAdmin');if(reset)reset.onclick=()=>{if(confirm('Reset semua data?')){state=clone(DEFAULT);save();renderAll();renderParticipantList()}}
 }
-setupNav();setupRosterModal();setupAdmin();setupBannedSystem();renderAll();renderParticipantList();
+setupNav();setupRosterModal();setupAdmin();setupBannedSystem();bindKillsAdmin();renderAll();renderParticipantList();
 loadRemoteState();
 setInterval(syncRemoteState, 2500);
