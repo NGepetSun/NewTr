@@ -100,53 +100,51 @@ function drawPremiumBracketLines(board){
   svg.setAttribute('aria-hidden','true');
   svg.setAttribute('width','100%'); svg.setAttribute('height','100%');
   svg.setAttribute('viewBox',`0 0 ${Math.max(1,br.width)} ${Math.max(1,br.height)}`);
-  svg.innerHTML=`<defs><filter id="bracketGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><linearGradient id="bracketGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8b6b22"/><stop offset=".5" stop-color="#f3d06a"/><stop offset="1" stop-color="#8b6b22"/></linearGradient></defs>`;
-  const rel=(r)=>({x:r.left-br.left,y:r.top-br.top,w:r.width,h:r.height});
+  svg.innerHTML=`<defs>
+    <filter id="bracketGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="bracketGold" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7c5b16"/><stop offset=".5" stop-color="#f5d46a"/><stop offset="1" stop-color="#9b751e"/></linearGradient>
+  </defs>`;
+  const rel=r=>({x:r.left-br.left,y:r.top-br.top,w:r.width,h:r.height});
+  const card=slot=>slot.querySelector('.match-card-ref')||slot;
+  const path=(d,stroke,width=1.5,filter=false)=>{
+    const q=document.createElementNS(svgNS,'path');
+    q.setAttribute('d',d);q.setAttribute('fill','none');q.setAttribute('stroke',stroke);
+    q.setAttribute('stroke-width',width);q.setAttribute('stroke-linecap','round');q.setAttribute('stroke-linejoin','round');q.setAttribute('vector-effect','non-scaling-stroke');
+    if(filter)q.setAttribute('filter','url(#bracketGlow)');
+    svg.appendChild(q);return q;
+  };
+  // Each connector uses a private vertical corridor between columns, preventing crossings.
   for(let i=0;i<rounds.length-1;i++){
     const from=[...rounds[i].querySelectorAll('.match-slot')];
     const to=[...rounds[i+1].querySelectorAll('.match-slot')];
     to.forEach((target,j)=>{
-      const sources=from.slice(j*2,j*2+2); if(!sources.length)return;
-      const tr=rel(target.getBoundingClientRect());
-      const tx=tr.x, ty=tr.y+tr.h/2;
-      const sourceRects=sources.map(x=>rel(x.getBoundingClientRect()));
-      const sx=Math.max(...sourceRects.map(r=>r.x+r.w));
-      const midX=sx+(tx-sx)*.5;
-      const color=i===rounds.length-2?'url(#bracketGold)':'#6f727b';
-      const glow=i===rounds.length-2?'url(#bracketGold)':'#8b8f99';
-      const path=(d,cls='')=>{const q=document.createElementNS(svgNS,'path');q.setAttribute('d',d);q.setAttribute('fill','none');q.setAttribute('class',cls);q.setAttribute('stroke',color);q.setAttribute('stroke-width',i===rounds.length-2?'2':'1.5');q.setAttribute('stroke-linecap','round');q.setAttribute('stroke-linejoin','round');q.setAttribute('vector-effect','non-scaling-stroke');return q};
-      sourceRects.forEach(sr=>{
-        const sy=sr.y+sr.h/2;
-        const p=path(`M ${sr.x+sr.w} ${sy} H ${midX} V ${ty} H ${tx}`);
-        p.setAttribute('filter','url(#bracketGlow)'); svg.appendChild(p);
+      const sources=from.slice(j*2,j*2+2).filter(Boolean);
+      if(!sources.length)return;
+      const tr=rel(card(target).getBoundingClientRect());
+      const tx=tr.x,ty=tr.y+tr.h/2;
+      const sr=sources.map(x=>rel(card(x).getBoundingClientRect()));
+      const sx=Math.max(...sr.map(r=>r.x+r.w));
+      const midX=sx+Math.max(24,(tx-sx)*0.5);
+      const stroke=i===rounds.length-2?'url(#bracketGold)':'#777b86';
+      const width=i===rounds.length-2?2:1.5;
+      sr.forEach(r=>{
+        const sy=r.y+r.h/2;
+        path(`M ${r.x+r.w} ${sy} H ${midX} V ${ty}`,stroke,width,i===rounds.length-2);
       });
-      const dot=document.createElementNS(svgNS,'circle');dot.setAttribute('cx',tx);dot.setAttribute('cy',ty);dot.setAttribute('r',i===rounds.length-2?'3':'2');dot.setAttribute('fill',glow);svg.appendChild(dot);
+      path(`M ${midX} ${ty} H ${tx}`,stroke,width,i===rounds.length-2);
+      const dot=document.createElementNS(svgNS,'circle');dot.setAttribute('cx',tx);dot.setAttribute('cy',ty);dot.setAttribute('r',i===rounds.length-2?'3':'2');dot.setAttribute('fill',stroke);svg.appendChild(dot);
     });
   }
-  // Connect the Grand Final directly into the Champion trophy card.
+  // Champion is visually attached to the Grand Final, not placed below the bracket.
   const finalRound=rounds[rounds.length-1];
+  const finalSlot=finalRound?.querySelector('.match-slot:not(.third-match)');
   const champion=board.querySelector('.champion-reference');
-  const finalSlot=finalRound?.querySelector('.match-slot');
-  if(finalSlot && champion){
-    const fr=rel(finalSlot.getBoundingClientRect());
-    const cr=rel(champion.getBoundingClientRect());
-    const sx=fr.x+fr.w, sy=fr.y+fr.h/2;
-    const tx=cr.x, ty=cr.y+cr.h/2;
-    const midX=sx+(tx-sx)*0.5;
-    const q=document.createElementNS(svgNS,'path');
-    q.setAttribute('d',`M ${sx} ${sy} H ${midX} V ${ty} H ${tx}`);
-    q.setAttribute('fill','none');
-    q.setAttribute('stroke','url(#bracketGold)');
-    q.setAttribute('stroke-width','2.5');
-    q.setAttribute('stroke-linecap','round');
-    q.setAttribute('stroke-linejoin','round');
-    q.setAttribute('filter','url(#bracketGlow)');
-    q.setAttribute('vector-effect','non-scaling-stroke');
-    svg.appendChild(q);
-    const dot=document.createElementNS(svgNS,'circle');
-    dot.setAttribute('cx',tx); dot.setAttribute('cy',ty); dot.setAttribute('r','3.5');
-    dot.setAttribute('fill','#f3d06a'); dot.setAttribute('filter','url(#bracketGlow)');
-    svg.appendChild(dot);
+  if(finalSlot&&champion){
+    const fr=rel(card(finalSlot).getBoundingClientRect()), cr=rel(champion.getBoundingClientRect());
+    const sy=fr.y+fr.h/2, ey=cr.y+cr.h/2, sx=fr.x+fr.w, ex=cr.x;
+    const mx=sx+Math.max(18,(ex-sx)*0.55);
+    path(`M ${sx} ${sy} H ${mx} V ${ey} H ${ex}`,'url(#bracketGold)',2.2,true);
+    const dot=document.createElementNS(svgNS,'circle');dot.setAttribute('cx',ex);dot.setAttribute('cy',ey);dot.setAttribute('r','3.2');dot.setAttribute('fill','#f5d46a');dot.setAttribute('filter','url(#bracketGlow)');svg.appendChild(dot);
   }
   board.prepend(svg);
 }

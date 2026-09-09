@@ -58,27 +58,14 @@ footer{height:54px;display:grid;place-items:center;background:#030305;border-top
 @media(max-width:720px){.bracket-header-clean{align-items:flex-start}.bracket-board{display:block;overflow-x:auto;min-height:0;padding:20px;white-space:nowrap}.bracket-col{display:inline-flex;vertical-align:top;width:210px;margin-right:28px;white-space:normal}.round-one .match-slot,.round-two .match-slot,.final-round .match-slot{margin-top:0;margin-bottom:34px;height:118px}.champion-box{display:inline-block;vertical-align:top;width:130px;margin:75px 0 0 0}.placement-strip{grid-template-columns:1fr 1fr}.placement-strip>div{padding:10px}.bracket-accent-title{font-size:17px}}
 /* Connector cleanup: use the match slots themselves so the bracket stays aligned with content. */
 .bracket-connectors{display:none}
-.round-one .match-slot::after,.round-two .match-slot::after,.final-round .match-slot::after{content:"";position:absolute;top:50%;right:-54px;width:54px;border-top:1px solid rgba(235,235,235,.34)}
-.round-one .match-slot:nth-of-type(2n+2)::before{content:"";position:absolute;top:-32px;right:-54px;width:54px;height:164px;border-right:1px solid rgba(235,235,235,.34);border-bottom:1px solid rgba(235,235,235,.34)}
-.round-one .match-slot:nth-of-type(2n+1)::before{content:"";position:absolute;top:50%;right:-54px;width:54px;height:164px;border-right:1px solid rgba(235,235,235,.34);border-top:1px solid rgba(235,235,235,.34)}
-.round-two .match-slot:nth-of-type(2n+1)::before{content:"";position:absolute;top:50%;right:-54px;width:54px;height:262px;border-right:1px solid rgba(235,235,235,.34);border-top:1px solid rgba(235,235,235,.34)}
-.round-two .match-slot:nth-of-type(2n+2)::before{content:"";position:absolute;top:-131px;right:-54px;width:54px;height:262px;border-right:1px solid rgba(235,235,235,.34);border-bottom:1px solid rgba(235,235,235,.34)}
-.final-round .match-slot::after{right:-54px;width:54px}
-@media(max-width:1050px){.round-one .match-slot::after,.round-two .match-slot::after,.final-round .match-slot::after{right:-28px;width:28px}.round-one .match-slot:nth-of-type(2n+2)::before,.round-one .match-slot:nth-of-type(2n+1)::before,.round-two .match-slot:nth-of-type(2n+1)::before,.round-two .match-slot:nth-of-type(2n+2)::before{right:-28px;width:28px}}
-@media(max-width:720px){.round-one .match-slot::after,.round-two .match-slot::after,.final-round .match-slot::after,.round-one .match-slot:nth-of-type(2n+2)::before,.round-one .match-slot:nth-of-type(2n+1)::before,.round-two .match-slot:nth-of-type(2n+1)::before,.round-two .match-slot:nth-of-type(2n+2)::before{display:none}}
 /* ===== SEPARATE PAGE NAVIGATION ===== */
 .admin-link{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
 /* ===== 8-SLOT SINGLE-SIDE REFERENCE BRACKET ===== */
-.bracket-reference-board{width:min(1400px,100%);min-height:760px;margin:0 auto;position:relative;display:grid;grid-template-columns:minmax(260px,1.55fr) minmax(220px,1.2fr) minmax(220px,1.1fr) 170px;column-gap:72px;padding:30px 24px 38px;background:rgba(6,7,10,.78);border:1px solid rgba(255,255,255,.08);overflow:hidden}
+.bracket-reference-board{width:min(1400px,100%);min-height:820px;margin:0 auto;position:relative;display:grid;grid-template-columns:minmax(260px,1.55fr) minmax(220px,1.2fr) minmax(220px,1.1fr) 170px;column-gap:72px;padding:30px 24px 38px;background:rgba(6,7,10,.78);border:1px solid rgba(255,255,255,.08);overflow:hidden}
 .bracket-reference-board:before{content:"";position:absolute;inset:0;background:linear-gradient(110deg,rgba(240,24,45,.08),transparent 35%,rgba(139,37,255,.05) 75%,transparent);pointer-events:none}
 .bracket-round{position:relative;z-index:2;display:flex;flex-direction:column}.bracket-round .col-title{text-align:left;margin:0 0 18px 4px}
 .round-q .match-slot{height:112px;margin-bottom:28px}.round-s .match-slot{height:112px;margin-top:80px;margin-bottom:94px}.round-g .match-slot{height:112px;margin-top:210px}.round-g .third-match{margin-top:70px}
 .bracket-reference-board .match-card-ref{width:100%;min-width:0}.bracket-reference-board .match-card-ref .team-row{height:52px;font-size:14px}
-.round-q .match-slot:nth-of-type(2n+1):after,.round-q .match-slot:nth-of-type(2n):after{content:"";position:absolute;right:-72px;width:72px;border-top:1px solid rgba(235,235,235,.42);z-index:-1}.round-q .match-slot:nth-of-type(2n+1):after{top:50%}.round-q .match-slot:nth-of-type(2n):after{top:50%}
-.round-q .match-slot:nth-of-type(2n+1):before{content:"";position:absolute;right:-72px;top:50%;height:140px;width:72px;border-right:1px solid rgba(235,235,235,.42);border-top:1px solid rgba(235,235,235,.42);z-index:-1}
-.round-q .match-slot:nth-of-type(2n):before{content:"";position:absolute;right:-72px;top:-70px;height:140px;width:72px;border-right:1px solid rgba(235,235,235,.42);border-bottom:1px solid rgba(235,235,235,.42);z-index:-1}
-.round-s .match-slot:after{content:"";position:absolute;right:-72px;top:50%;width:72px;border-top:1px solid rgba(235,235,235,.42);z-index:-1}.round-s .match-slot:nth-of-type(2):before{content:"";position:absolute;right:-72px;top:-140px;height:280px;width:72px;border-right:1px solid rgba(235,235,235,.42);border-bottom:1px solid rgba(235,235,235,.42);z-index:-1}.round-s .match-slot:nth-of-type(1):before{content:"";position:absolute;right:-72px;top:50%;height:280px;width:72px;border-right:1px solid rgba(235,235,235,.42);border-top:1px solid rgba(235,235,235,.42);z-index:-1}
-.round-g .match-slot:first-of-type:after{content:"";position:absolute;right:-72px;top:50%;width:72px;border-top:1px solid rgba(235,235,235,.42);z-index:-1}
 .champion-reference{position:relative;z-index:3;align-self:center;margin-top:40px;text-align:center;border-left:4px solid #27d14b;padding:18px 10px;background:linear-gradient(90deg,rgba(39,209,75,.05),transparent);min-width:150px}.champion-reference span{font:900 11px 'Barlow Condensed';letter-spacing:2px;color:#888}.champion-reference div{font-size:55px;line-height:1.1;margin:10px 0}.champion-reference strong{display:block;font:900 20px 'Barlow Condensed';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.champion-reference small{font:800 8px Inter;color:#777;letter-spacing:2px}
 @media(max-width:1050px){.bracket-reference-board{grid-template-columns:260px 220px 220px 150px;column-gap:42px;overflow-x:auto}.round-q .match-slot:nth-of-type(2n+1):before,.round-q .match-slot:nth-of-type(2n):before,.round-q .match-slot:nth-of-type(2n+1):after,.round-q .match-slot:nth-of-type(2n):after,.round-s .match-slot:after,.round-s .match-slot:before,.round-g .match-slot:first-of-type:after{display:none}}
 @media(max-width:720px){.bracket-reference-board{display:flex;gap:30px;min-height:0;overflow-x:auto;padding:22px}.bracket-round{flex:0 0 230px}.round-q .match-slot,.round-s .match-slot,.round-g .match-slot,.round-g .third-match{margin-top:0;margin-bottom:30px;height:104px}.champion-reference{flex:0 0 150px;margin-top:100px}.placement-strip{grid-template-columns:1fr 1fr}}
@@ -104,8 +91,8 @@ footer{height:54px;display:grid;place-items:center;background:#030305;border-top
 .bracket-reference-board{overflow-x:auto}
 .banned-list{max-height:none;overflow:visible}
 /* 16-team bracket layout */
-.bracket-reference-board{grid-template-columns:minmax(250px,1.45fr) minmax(210px,1.15fr) minmax(200px,1fr) minmax(200px,1fr) 170px;}
-@media(max-width:1050px){.bracket-reference-board{grid-template-columns:250px 210px 200px 200px 150px;column-gap:42px;overflow-x:auto}}
+.bracket-reference-board{grid-template-columns:minmax(250px,1.45fr) minmax(210px,1.15fr) minmax(200px,1fr) minmax(220px,1fr);padding-right:250px;}
+@media(max-width:1050px){.bracket-reference-board{grid-template-columns:250px 210px 200px 220px;column-gap:42px;padding-right:220px;overflow-x:auto}}
 
 .shuffle-action:disabled{opacity:.45;cursor:not-allowed!important;border-color:#333!important;color:#777!important}
 
@@ -124,7 +111,7 @@ footer{height:54px;display:grid;place-items:center;background:#030305;border-top
 .champion-reference{border:1px solid rgba(255,198,43,.3)!important;border-left:3px solid #ffc62b!important;border-radius:5px;box-shadow:0 0 35px rgba(255,198,43,.06),inset 0 1px 0 rgba(255,255,255,.04);background:linear-gradient(180deg,rgba(28,23,10,.78),rgba(7,8,11,.92))!important}
 .champion-reference div{filter:drop-shadow(0 0 14px rgba(255,198,43,.35));}
 @media(max-width:1050px){.bracket-lines-ref{display:block!important}.bracket-reference-board{min-width:1050px}.bracket-reference-board .match-card-ref{box-shadow:0 8px 20px rgba(0,0,0,.4)}}
-@media(max-width:720px){.bracket-lines-ref{display:none!important}.bracket-reference-board{min-width:0}.bracket-reference-board .match-card-ref:hover{transform:none}}
+@media(max-width:720px){.bracket-lines-ref{display:block!important}.bracket-reference-board .match-card-ref:hover{transform:none}}
 
 /* Premium 3rd-place match */
 .admin-third-place{margin:22px auto 0;max-width:720px;border:1px solid rgba(210,163,41,.28);background:linear-gradient(180deg,rgba(20,18,12,.96),rgba(8,9,12,.96));border-radius:10px;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.28)}
@@ -132,9 +119,14 @@ footer{height:54px;display:grid;place-items:center;background:#030305;border-top
 .admin-third-place .team-row{cursor:pointer}.admin-third-place .team-row:hover{background:rgba(255,198,43,.08)}
 @media(max-width:720px){.admin-third-place{margin-left:0;margin-right:0}.third-place-head h4{font-size:21px}.third-place-head small{display:block;max-width:280px}}
 
-/* Champion trophy is part of the bracket flow, not a detached panel. */
-.bracket-reference-board .champion-reference{position:relative;z-index:3;align-self:center;margin-top:40px;min-width:170px;padding:18px 14px;border:1px solid rgba(255,198,43,.34)!important;border-left:3px solid #ffc62b!important;border-radius:6px;background:linear-gradient(180deg,rgba(30,25,10,.9),rgba(7,8,11,.96))!important;box-shadow:0 0 35px rgba(255,198,43,.07),inset 0 1px 0 rgba(255,255,255,.05)}
-.bracket-reference-board .champion-reference:before{content:"";position:absolute;left:-18px;top:50%;width:18px;border-top:2px solid rgba(243,208,106,.9);filter:drop-shadow(0 0 4px rgba(255,198,43,.45));}
-.bracket-reference-board .champion-reference div{font-size:58px;line-height:1.05;margin:9px 0;filter:drop-shadow(0 0 14px rgba(255,198,43,.4))}
-.bracket-reference-board .champion-reference strong{font-size:21px}
-@media(max-width:720px){.bracket-reference-board .champion-reference:before{display:none}}
+/* ===== FINAL BRACKET CONNECTOR FIX ===== */
+.bracket-reference-board{position:relative;}
+.bracket-reference-board .champion-reference{position:absolute!important;right:28px!important;top:50%!important;transform:translateY(-50%);width:180px!important;min-width:0!important;margin:0!important;padding:20px 12px!important;align-self:auto!important;}
+.bracket-reference-board .champion-reference:before{content:"FINAL WINNER";display:block;color:#8f8f96;font:800 8px 'Barlow Condensed';letter-spacing:2px;margin-bottom:2px;}
+.bracket-reference-board .champion-reference div{font-size:50px!important;margin:6px 0 4px!important;}
+.bracket-reference-board .champion-reference strong{font-size:22px!important;}
+.bracket-lines-ref{z-index:2!important;}
+.bracket-reference-board>.bracket-round,.bracket-reference-board>.champion-reference,.bracket-reference-board>.bracket-third-result{position:relative;z-index:3;}
+.bracket-reference-board>.champion-reference{position:absolute!important;}
+@media(max-width:1050px){.bracket-reference-board{min-width:1100px!important;overflow-x:auto!important}.bracket-reference-board .champion-reference{right:22px!important;width:175px!important}}
+@media(max-width:720px){.bracket-reference-board{min-width:1050px!important;display:grid!important;overflow-x:auto!important}.bracket-reference-board .champion-reference{position:absolute!important;right:20px!important;top:50%!important;transform:translateY(-50%)!important}}
