@@ -1,6 +1,9 @@
 const TEAM_COUNT=16;
 const DEFAULT={teams:Array.from({length:TEAM_COUNT},(_,i)=>({name:`MPD ${String.fromCharCode(65+i)}`,side:'mixed',players:[]})),scores:{},winners:{},live:{idp:'',ime:''},banned:[]};
 const KEY='mapendos-v9-pages';
+const API_STATE='/api/state';
+let remoteReady=false;
+let remoteUpdatedAt=null;
 const clone=o=>JSON.parse(JSON.stringify(o));
 const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
 const teamLabel=i=>`MPD ${String.fromCharCode(65+i)}`;
@@ -20,7 +23,29 @@ function normalize(raw){
 }
 let state;try{state=normalize(JSON.parse(localStorage.getItem(KEY)||'null'))}catch{state=clone(DEFAULT)}
 if(!state||!Array.isArray(state.teams))state=clone(DEFAULT);
-const save=()=>localStorage.setItem(KEY,JSON.stringify(state));
+const save=async()=>{
+  localStorage.setItem(KEY,JSON.stringify(state));
+  try {
+    const r=await fetch(API_STATE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+    if(r.ok){ const data=await r.json(); remoteUpdatedAt=data.state?.updatedAt||new Date().toISOString(); remoteReady=true; }
+  } catch(e) { console.warn('Remote save unavailable; local cache kept.',e); }
+};
+async function loadRemoteState(){
+  try{
+    const r=await fetch(API_STATE,{cache:'no-store'});
+    if(!r.ok) throw new Error('API '+r.status);
+    const data=await r.json();
+    if(data&&Array.isArray(data.teams)){ state=normalize(data); localStorage.setItem(KEY,JSON.stringify(state)); remoteUpdatedAt=data.updatedAt||null; remoteReady=true; renderAll(); renderParticipantList(); }
+  }catch(e){ console.warn('Using local state because remote database is unavailable.',e); }
+}
+async function syncRemoteState(){
+  if(!remoteReady) return;
+  try{
+    const r=await fetch(API_STATE,{cache:'no-store'}); if(!r.ok)return;
+    const data=await r.json();
+    if(data?.updatedAt && data.updatedAt!==remoteUpdatedAt){ state=normalize(data); remoteUpdatedAt=data.updatedAt; localStorage.setItem(KEY,JSON.stringify(state)); renderAll(); renderParticipantList(); }
+  }catch(e){}
+}
 const winner=(k,a,b)=>{
   const w=state.winners[k];
   if(w===a||w===b)return w;
@@ -97,6 +122,31 @@ function drawPremiumBracketLines(board){
       });
       const dot=document.createElementNS(svgNS,'circle');dot.setAttribute('cx',tx);dot.setAttribute('cy',ty);dot.setAttribute('r',i===rounds.length-2?'3':'2');dot.setAttribute('fill',glow);svg.appendChild(dot);
     });
+  }
+  // Connect the Grand Final directly into the Champion trophy card.
+  const finalRound=rounds[rounds.length-1];
+  const champion=board.querySelector('.champion-reference');
+  const finalSlot=finalRound?.querySelector('.match-slot');
+  if(finalSlot && champion){
+    const fr=rel(finalSlot.getBoundingClientRect());
+    const cr=rel(champion.getBoundingClientRect());
+    const sx=fr.x+fr.w, sy=fr.y+fr.h/2;
+    const tx=cr.x, ty=cr.y+cr.h/2;
+    const midX=sx+(tx-sx)*0.5;
+    const q=document.createElementNS(svgNS,'path');
+    q.setAttribute('d',`M ${sx} ${sy} H ${midX} V ${ty} H ${tx}`);
+    q.setAttribute('fill','none');
+    q.setAttribute('stroke','url(#bracketGold)');
+    q.setAttribute('stroke-width','2.5');
+    q.setAttribute('stroke-linecap','round');
+    q.setAttribute('stroke-linejoin','round');
+    q.setAttribute('filter','url(#bracketGlow)');
+    q.setAttribute('vector-effect','non-scaling-stroke');
+    svg.appendChild(q);
+    const dot=document.createElementNS(svgNS,'circle');
+    dot.setAttribute('cx',tx); dot.setAttribute('cy',ty); dot.setAttribute('r','3.5');
+    dot.setAttribute('fill','#f3d06a'); dot.setAttribute('filter','url(#bracketGlow)');
+    svg.appendChild(dot);
   }
   board.prepend(svg);
 }
@@ -266,9 +316,14 @@ function renderResults(){
   ms.filter(m=>m[0]!=='third').forEach(m=>{const r=m[0].match(/^r(\d+)/)?.[1]||'1';(rounds[r]??=[]).push(m)});
   const roundKeys=Object.keys(rounds).sort((a,b)=>+a-+b);
   el.className='result-grid result-bracket';
+  const third=ms.find(m=>m[0]==='third');
   el.innerHTML=`<div class="bracket-reference-board admin-result-board">
     ${roundKeys.map((r,idx)=>`<div class="bracket-round round-${idx===0?'q':idx===roundKeys.length-1?'g':'s'}" data-round="${r}"><div class="col-title">${idx===roundKeys.length-1?'GRAND FINAL':idx===roundKeys.length-2?'SEMI FINAL':idx===roundKeys.length-3?'QUARTER FINAL':'ROUND OF 16'}</div>${rounds[r].map(m=>`<div class="match-slot">${refCard(m,true)}</div>`).join('')}</div>`).join('')}
-    <div class="champion-reference"><span>CHAMPION</span><div>🏆</div><strong>TBD</strong><small>JUARA 1</small></div>
+    <div class="champion-reference"><span>CHAMPION</span><div>🏆</div><strong>${esc(winner('r4m1', rounds['4']?.[0]?.[2]||'TBD', rounds['4']?.[0]?.[3]||'TBD'))}</strong><small>JUARA 1</small></div>
+  </div>
+  <div class="admin-third-place">
+    <div class="third-place-head"><div><span>PLACEMENT MATCH</span><h4>3RD PLACE MATCH</h4><small>Perebutan Juara 3 &amp; 4 — pemenang mendapat JUARA 3, yang kalah JUARA 4.</small></div><b>🥉</b></div>
+    <div class="third-place-card">${third?refCard(third,true):''}</div>
   </div>`;
   requestAnimationFrame(()=>drawPremiumBracketLines(el.querySelector('.bracket-reference-board')));
   el.querySelectorAll('[data-result-win]').forEach(b=>b.onclick=()=>{
@@ -355,3 +410,5 @@ function setupAdmin(){
   const reset=document.querySelector('#resetAdmin');if(reset)reset.onclick=()=>{if(confirm('Reset semua data?')){state=clone(DEFAULT);save();renderAll();renderParticipantList()}}
 }
 setupNav();setupRosterModal();setupAdmin();setupBannedSystem();renderAll();renderParticipantList();
+loadRemoteState();
+setInterval(syncRemoteState, 2500);

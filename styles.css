@@ -125,3 +125,16 @@ footer{height:54px;display:grid;place-items:center;background:#030305;border-top
 .champion-reference div{filter:drop-shadow(0 0 14px rgba(255,198,43,.35));}
 @media(max-width:1050px){.bracket-lines-ref{display:block!important}.bracket-reference-board{min-width:1050px}.bracket-reference-board .match-card-ref{box-shadow:0 8px 20px rgba(0,0,0,.4)}}
 @media(max-width:720px){.bracket-lines-ref{display:none!important}.bracket-reference-board{min-width:0}.bracket-reference-board .match-card-ref:hover{transform:none}}
+
+/* Premium 3rd-place match */
+.admin-third-place{margin:22px auto 0;max-width:720px;border:1px solid rgba(210,163,41,.28);background:linear-gradient(180deg,rgba(20,18,12,.96),rgba(8,9,12,.96));border-radius:10px;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.28)}
+.third-place-head{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:12px}.third-place-head span{font:800 9px 'Barlow Condensed';letter-spacing:2px;color:#bda86d}.third-place-head h4{margin:3px 0;font:900 24px 'Barlow Condensed';letter-spacing:1px}.third-place-head small{color:#777;font:500 11px Inter}.third-place-head>b{font-size:34px;filter:drop-shadow(0 0 12px rgba(205,170,70,.25))}.third-place-card{max-width:430px;margin:auto}.admin-third-place .match-card-ref{border-color:rgba(210,163,41,.55);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.admin-third-place .team-row{cursor:pointer}.admin-third-place .team-row:hover{background:rgba(255,198,43,.08)}
+@media(max-width:720px){.admin-third-place{margin-left:0;margin-right:0}.third-place-head h4{font-size:21px}.third-place-head small{display:block;max-width:280px}}
+
+/* Champion trophy is part of the bracket flow, not a detached panel. */
+.bracket-reference-board .champion-reference{position:relative;z-index:3;align-self:center;margin-top:40px;min-width:170px;padding:18px 14px;border:1px solid rgba(255,198,43,.34)!important;border-left:3px solid #ffc62b!important;border-radius:6px;background:linear-gradient(180deg,rgba(30,25,10,.9),rgba(7,8,11,.96))!important;box-shadow:0 0 35px rgba(255,198,43,.07),inset 0 1px 0 rgba(255,255,255,.05)}
+.bracket-reference-board .champion-reference:before{content:"";position:absolute;left:-18px;top:50%;width:18px;border-top:2px solid rgba(243,208,106,.9);filter:drop-shadow(0 0 4px rgba(255,198,43,.45));}
+.bracket-reference-board .champion-reference div{font-size:58px;line-height:1.05;margin:9px 0;filter:drop-shadow(0 0 14px rgba(255,198,43,.4))}
+.bracket-reference-board .champion-reference strong{font-size:21px}
+@media(max-width:720px){.bracket-reference-board .champion-reference:before{display:none}}
