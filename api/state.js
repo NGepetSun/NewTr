@@ -9,6 +9,7 @@ const DEFAULT = {
     side: 'mixed',
     players: []
   })),
+  bracketOrder: Array.from({ length: 16 }, (_, i) => i),
   scores: {},
   winners: {},
   live: { idp: '', ime: '' },
@@ -21,7 +22,7 @@ module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Key');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Admin-Key, X-Admin-Password');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
 
@@ -77,12 +78,17 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: 'Invalid tournament state' });
       }
 
+      const rawOrder = Array.isArray(body.bracketOrder) ? body.bracketOrder.map(Number).filter(i => Number.isInteger(i) && i >= 0 && i < 16) : DEFAULT.bracketOrder;
+      const bracketOrder = [...new Set(rawOrder)];
+      for (let i = 0; i < 16; i++) if (!bracketOrder.includes(i)) bracketOrder.push(i);
+
       const state = {
         teams: body.teams.slice(0, 16).map((team, i) => ({
           name: `MPD ${String.fromCharCode(65 + i)}`,
           side: 'mixed',
           players: Array.isArray(team.players) ? team.players.slice(0, 5) : []
         })),
+        bracketOrder,
         scores: body.scores && typeof body.scores === 'object' ? body.scores : {},
         winners: body.winners && typeof body.winners === 'object' ? body.winners : {},
         live: body.live && typeof body.live === 'object' ? body.live : { idp: '', ime: '' },
