@@ -50,6 +50,29 @@ module.exports = async (req, res) => {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
+      // Destructive admin actions are handled separately from normal state saves.
+      // The password/header check above is mandatory for every destructive action.
+      if (body.action === 'reset_all') {
+        await redis.del(KEY);
+        return res.status(200).json({ ok: true, action: 'reset_all' });
+      }
+
+      if (body.action === 'reset_kills') {
+        const current = await redis.get(KEY);
+        const base = current && typeof current === 'object' ? current : DEFAULT;
+        const next = { ...base, killsRanking: { ...DEFAULT.killsRanking }, updatedAt: new Date().toISOString() };
+        await redis.set(KEY, next);
+        return res.status(200).json({ ok: true, action: 'reset_kills', state: next });
+      }
+
+      if (body.action === 'reset_tournament') {
+        const current = await redis.get(KEY);
+        const base = current && typeof current === 'object' ? current : DEFAULT;
+        const next = { ...DEFAULT, live: base.live || { idp: '', ime: '' }, killsRanking: base.killsRanking || { ...DEFAULT.killsRanking }, updatedAt: new Date().toISOString() };
+        await redis.set(KEY, next);
+        return res.status(200).json({ ok: true, action: 'reset_tournament', state: next });
+      }
+
       if (!body || typeof body !== 'object' || !Array.isArray(body.teams)) {
         return res.status(400).json({ error: 'Invalid tournament state' });
       }
