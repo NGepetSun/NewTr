@@ -314,6 +314,24 @@ function shufflePlayers(){
     note.classList.toggle('success',!res.conflict&&!res.impossible);note.classList.toggle('warn',res.conflict||res.impossible);
   }
 }
+function shuffleBracket(){
+  if(!Array.isArray(state.teams) || state.teams.length<2){ alert('Minimal 2 team diperlukan untuk mengocok bracket.'); return; }
+  const teams=[...state.teams];
+  for(let i=teams.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [teams[i],teams[j]]=[teams[j],teams[i]];
+  }
+  state.teams=teams;
+  state.winners={};
+  state.scores={};
+  save();
+  renderAll();
+  const note=document.querySelector('#bracketShuffleNote');
+  if(note){
+    note.textContent='Bracket berhasil dikocok. Pasangan Round 1 diacak ulang tanpa mengubah roster setiap team.';
+    note.classList.add('success');
+  }
+}
 function renderResults(){
   const el=document.querySelector('#resultGrid');if(!el)return;
   const ms=matches();
@@ -494,6 +512,7 @@ function setupAdmin(){
   document.querySelectorAll('.admin-sidebar nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.admin-sidebar nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.admin-view').forEach(v=>v.classList.toggle('active',v.dataset.view===b.dataset.tab))});
   document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>document.querySelector(`.admin-sidebar nav button[data-tab="${b.dataset.jump}"]`)?.click());
   const clear=document.querySelector('#clearResults');if(clear)clear.onclick=()=>{state.winners={};state.scores={};save();renderAll()};
+  const shuffleBracketBtn=document.querySelector('#shuffleBracket');if(shuffleBracketBtn)shuffleBracketBtn.onclick=shuffleBracket;
   const saveAdmin=document.querySelector('#saveAdmin');if(saveAdmin)saveAdmin.onclick=()=>save();
   const saveLive=document.querySelector('#saveLive');if(saveLive)saveLive.onclick=()=>{state.live.idp=document.querySelector('#admin-live-idp')?.value||'';state.live.ime=document.querySelector('#admin-live-ime')?.value||'';save();renderLive()};
   const exp=document.querySelector('#exportData');if(exp)exp.onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));a.download='mapendos-backup.json';a.click()};

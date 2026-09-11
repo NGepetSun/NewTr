@@ -280,3 +280,5 @@ footer{height:54px;display:grid;place-items:center;background:#030305;border-top
 .danger-actions button:hover{border-color:#d84b58;background:#221014;color:#fff}
 .danger-actions button:last-child{border-color:#8c2631;background:#260b10;color:#ff6672}
 @media(max-width:620px){.danger-actions{grid-template-columns:1fr}.danger-zone{padding:14px}}
+
+#bracketShuffleNote{margin-bottom:14px}
