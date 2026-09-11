@@ -13,6 +13,7 @@ const DEFAULT = {
   winners: {},
   live: { idp: '', ime: '' },
   banned: [],
+  killsRanking: { matchLabel:'ALL MATCHES', weekLabel:'WEEK 1', seasonLabel:'REGULAR SEASON', matches:[] },
   updatedAt: null
 };
 
@@ -35,12 +36,20 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const configuredKey = process.env.ADMIN_KEY;
-      if (configuredKey && req.headers['x-admin-key'] !== configuredKey) {
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+
+      if (body.action === 'auth') {
+        const configuredPassword = process.env.ADMIN_PASSWORD || process.env.ADMIN_KEY;
+        if (!configuredPassword) return res.status(500).json({ error: 'ADMIN_PASSWORD is not configured' });
+        if (String(body.password || '') !== String(configuredPassword)) return res.status(401).json({ error: 'Invalid password' });
+        return res.status(200).json({ ok: true });
+      }
+
+      const configuredKey = process.env.ADMIN_PASSWORD || process.env.ADMIN_KEY;
+      if (configuredKey && req.headers['x-admin-password'] !== configuredKey && req.headers['x-admin-key'] !== configuredKey) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       if (!body || typeof body !== 'object' || !Array.isArray(body.teams)) {
         return res.status(400).json({ error: 'Invalid tournament state' });
       }
@@ -55,6 +64,20 @@ module.exports = async (req, res) => {
         winners: body.winners && typeof body.winners === 'object' ? body.winners : {},
         live: body.live && typeof body.live === 'object' ? body.live : { idp: '', ime: '' },
         banned: Array.isArray(body.banned) ? [...new Set(body.banned.filter(Boolean).map(String))] : [],
+        killsRanking: body.killsRanking && typeof body.killsRanking === 'object' ? {
+          matchLabel: String(body.killsRanking.matchLabel || 'ALL MATCHES'),
+          weekLabel: String(body.killsRanking.weekLabel || 'WEEK 1'),
+          seasonLabel: String(body.killsRanking.seasonLabel || 'REGULAR SEASON'),
+          matches: Array.isArray(body.killsRanking.matches) ? body.killsRanking.matches.map(m => ({
+            matchLabel: String(m?.matchLabel || 'MATCH'),
+            entries: Array.isArray(m?.entries) ? m.entries.slice(0,5).map(e => ({
+              name: String(e?.name || ''),
+              kills: Math.max(0, Math.floor(Number(e?.kills) || 0)),
+              team: String(e?.team || ''),
+              side: String(e?.side || '')
+            })).filter(e => e.name) : []
+          })).filter(m => m.entries.length || m.matchLabel) : []
+        } : { matchLabel:'ALL MATCHES', weekLabel:'WEEK 1', seasonLabel:'REGULAR SEASON', matches:[] },
         updatedAt: new Date().toISOString()
       };
 
