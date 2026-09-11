@@ -26,10 +26,13 @@ function normalize(raw){
 }
 let state;try{state=normalize(JSON.parse(localStorage.getItem(KEY)||'null'))}catch{state=clone(DEFAULT)}
 if(!state||!Array.isArray(state.teams))state=clone(DEFAULT);
+const getAdminPassword=()=>sessionStorage.getItem('mapendos-admin-password')||'';
 const save=async()=>{
   localStorage.setItem(KEY,JSON.stringify(state));
   try {
-    const r=await fetch(API_STATE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+    const headers={'Content-Type':'application/json'};
+    const pw=getAdminPassword(); if(pw) headers['X-Admin-Password']=pw;
+    const r=await fetch(API_STATE,{method:'POST',headers,body:JSON.stringify(state)});
     if(r.ok){ const data=await r.json(); remoteUpdatedAt=data.state?.updatedAt||new Date().toISOString(); remoteReady=true; }
   } catch(e) { console.warn('Remote save unavailable; local cache kept.',e); }
 };
@@ -351,26 +354,33 @@ function getKillsMatches(){
   return state.killsRanking.matches;
 }
 function rosterLookup(name){
-  const q=String(name||'').trim().toLowerCase(), players=getAllRosterPlayers();
-  return players.find(p=>p.name.toLowerCase()===q)||players.find(p=>p.name.toLowerCase().includes(q));
+  const q=String(name||'').trim().toLowerCase();
+  return getAllRosterPlayers().find(p=>p.name.toLowerCase()===q)||null;
 }
 function aggregateKills(){
   const map=new Map();
   getKillsMatches().forEach(m=>(m.entries||[]).forEach(e=>{
-    const key=e.name.toLowerCase(), roster=rosterLookup(e.name), cur=map.get(key)||{name:e.name,kills:0,team:e.team||'',side:e.side||''};
-    cur.kills+=Math.max(0,Math.floor(Number(e.kills)||0));
-    if(roster){cur.name=roster.name;cur.team=roster.team;cur.side=roster.side||cur.side}
+    const name=String(e?.name||'').trim(); if(!name)return;
+    const key=name.toLowerCase();
+    const cur=map.get(key)||{name,kills:0,team:String(e?.team||''),side:String(e?.side||'')};
+    cur.kills+=Math.max(0,Math.floor(Number(e?.kills)||0));
     map.set(key,cur);
   }));
   return [...map.values()];
+}
+function renderKillsTotalTable(){
+  const el=document.querySelector('#killsTotalTable'); if(!el)return;
+  const ranked=aggregateKills().sort((a,b)=>b.kills-a.kills||a.name.localeCompare(b.name));
+  el.innerHTML=ranked.length ? `<div class="kills-total-row kills-total-row-head"><span>#</span><span>PLAYER</span><span>TOTAL KILL</span></div>${ranked.map((p,i)=>`<div class="kills-total-row"><span>${String(i+1).padStart(2,'0')}</span><div><b>${esc(p.name)}</b>${p.team||p.side?`<small>${esc(p.team||'MAPENDOS')}${p.side?' · '+esc(p.side.toUpperCase()):''}</small>`:''}</div><strong>${p.kills}</strong></div>`).join('')}` : '<div class="kills-total-empty">Belum ada data total kill.</div>';
 }
 function renderKillsRanking(){
   const board=document.querySelector('#killsRankingBoard');if(!board)return;
   const ranked=aggregateKills().sort((a,b)=>b.kills-a.kills||a.name.localeCompare(b.name)).slice(0,5),k=state.killsRanking||{};
   board.innerHTML=ranked.length?ranked.map((p,i)=>{
-    const side=(p.side||'').toUpperCase(), initials=p.name.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase(), cls=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other';
-    return `<article class="kill-card ${cls}"><div class="kill-card-top"><span class="kill-rank">${String(i+1).padStart(2,'0')}</span><span class="kill-kpg">${p.kills} TOTAL KILL</span></div><div class="kill-avatar"><span>${esc(initials||'?')}</span></div><div class="kill-card-bottom"><div><strong>${esc(p.name)}</strong><small>${esc(p.team||'MAPENDOS')} · ${esc(side||'MIXED')}</small></div><b>${p.kills}</b></div></article>`;
+    const side=(p.side||'').toUpperCase(), cls=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other';
+    return `<article class="kill-card ${cls}"><div class="kill-card-top"><span class="kill-rank">${String(i+1).padStart(2,'0')}</span><span class="kill-kpg">${p.kills} TOTAL KILL</span></div><div class="kill-avatar"><div class="esport-silhouette" aria-hidden="true"><i></i><b></b></div></div><div class="kill-card-bottom"><div><strong>${esc(p.name)}</strong><small>${esc(p.team||'MAPENDOS')}${side?' · '+esc(side):''}</small></div><b>${p.kills}</b></div></article>`;
   }).join(''):`<div class="kills-empty">Belum ada data kills.</div>`;
+  renderKillsTotalTable();
   const meta=document.querySelector('#killsMatchMeta');if(meta)meta.innerHTML=`<span>${esc(k.weekLabel||'WEEK 1')}</span><b>${esc(k.seasonLabel||'REGULAR SEASON')}</b><em>${esc(k.matchLabel||'ALL MATCHES')}</em>`;
 
   const table=document.querySelector('#killsAdminTable');
@@ -379,13 +389,13 @@ function renderKillsRanking(){
 }
 function bindKillsAdmin(){
   const add=()=>{
-    const mi=document.querySelector('#killsInputMatch'),pi=document.querySelector('#killsInputPlayer'),ki=document.querySelector('#killsInputKills'),matchLabel=mi?.value.trim()||'MATCH 1',player=rosterLookup(pi?.value),raw=String(ki?.value||'').trim(),kills=Math.max(0,Math.floor(Number(raw)||0));
-    if(!pi?.value.trim()){alert('Ketik nama player.');return} if(!player){alert('Nama player tidak cocok dengan roster. Ketik nama sesuai roster.');return} if(!raw){alert('Masukkan jumlah kill.');return}
+    const mi=document.querySelector('#killsInputMatch'),pi=document.querySelector('#killsInputPlayer'),ki=document.querySelector('#killsInputKills'),matchLabel=mi?.value.trim()||'MATCH 1',playerName=pi?.value.trim(),raw=String(ki?.value||'').trim(),kills=Math.max(0,Math.floor(Number(raw)||0));
+    if(!playerName){alert('Ketik nama player.');return} if(!raw){alert('Masukkan jumlah kill.');return}
     const matches=getKillsMatches();let match=matches.find(m=>m.matchLabel.toLowerCase()===matchLabel.toLowerCase());
     if(!match){match={matchLabel,entries:[]};matches.push(match)}
-    if(match.entries.some(e=>e.name.toLowerCase()===player.name.toLowerCase())){alert('Player tersebut sudah ada di match ini.');return}
+    if(match.entries.some(e=>e.name.toLowerCase()===playerName.toLowerCase())){alert('Player tersebut sudah ada di match ini.');return}
     if(match.entries.length>=5){alert('Maksimal 5 Top Kill untuk setiap match.');return}
-    match.entries.push({name:player.name,kills,team:player.team,side:player.side});state.killsRanking.matchLabel=matchLabel;save();renderKillsRanking();if(pi)pi.value='';if(ki)ki.value='';pi?.focus();
+    match.entries.push({name:playerName,kills,team:'',side:''});state.killsRanking.matchLabel=matchLabel;save();renderKillsRanking();if(pi)pi.value='';if(ki)ki.value='';pi?.focus();
   };
   document.querySelector('#addKillsEntry')?.addEventListener('click',add);
   document.querySelector('#killsInputPlayer')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add()}});
@@ -459,6 +469,27 @@ function setupRosterModal(){
   document.querySelector('#shufflePlayers')?.addEventListener('click',shufflePlayers);
   document.querySelector('#participantList')?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-player]');if(!b)return;const [side,index]=b.dataset.removePlayer.split(':');if(confirm(`Hapus peserta ${side}?`))removeParticipant(side,index)});
 }
+function setupAdminLogin(){
+  const gate=document.querySelector('#adminLogin'); if(!gate)return true;
+  const stored=getAdminPassword();
+  if(stored) gate.classList.add('hidden');
+  const form=document.querySelector('#adminLoginForm'), input=document.querySelector('#adminPassword'), err=document.querySelector('#adminLoginError');
+  form?.addEventListener('submit',async e=>{
+    e.preventDefault(); const password=input?.value||''; if(!password)return;
+    try{
+      const r=await fetch(API_STATE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'auth',password})});
+      if(!r.ok) throw new Error('Invalid password');
+      sessionStorage.setItem('mapendos-admin-password',password);
+      gate.classList.add('hidden'); if(err)err.textContent='';
+      if(typeof setupAdmin==='function') setupAdmin();
+      if(typeof setupBannedSystem==='function') setupBannedSystem();
+      if(typeof bindKillsAdmin==='function') bindKillsAdmin();
+      renderAll(); renderParticipantList(); loadRemoteState();
+    }catch(_){ if(err)err.textContent='Password salah atau ADMIN_PASSWORD belum dikonfigurasi.'; if(input){input.value='';input.focus();}}
+  });
+  return !!stored;
+}
+
 function setupAdmin(){
   document.querySelectorAll('.admin-sidebar nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.admin-sidebar nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.admin-view').forEach(v=>v.classList.toggle('active',v.dataset.view===b.dataset.tab))});
   document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>document.querySelector(`.admin-sidebar nav button[data-tab="${b.dataset.jump}"]`)?.click());
@@ -469,6 +500,13 @@ function setupAdmin(){
   const imp=document.querySelector('#importData');if(imp)imp.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=normalize(JSON.parse(r.result));save();renderAll();renderParticipantList()}catch{alert('JSON tidak valid')}};r.readAsText(f)};
   const reset=document.querySelector('#resetAdmin');if(reset)reset.onclick=()=>{if(confirm('Reset semua data?')){state=clone(DEFAULT);save();renderAll();renderParticipantList()}}
 }
-setupNav();setupRosterModal();setupAdmin();setupBannedSystem();bindKillsAdmin();renderAll();renderParticipantList();
-loadRemoteState();
+setupNav();
+const isAdminPage=!!document.querySelector('.admin-page');
+if(!isAdminPage || getAdminPassword()){
+  if(isAdminPage){setupRosterModal();setupAdmin();setupBannedSystem();bindKillsAdmin();}
+  renderAll();renderParticipantList();loadRemoteState();
+}else{
+  renderAll();
+}
+if(isAdminPage) setupAdminLogin();
 setInterval(syncRemoteState, 2500);

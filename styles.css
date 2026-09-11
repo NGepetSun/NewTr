@@ -205,3 +205,67 @@ footer{height:54px;display:grid;place-items:center;background:#030305;border-top
 .placement-mini-grid b{display:block;color:#fff;font:900 14px 'Barlow Condensed';margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bracket-third-result{display:none}
 @media(max-width:720px){.bracket-podium-reference{flex:0 0 210px;margin-top:40px}.bracket-podium-reference .champion-reference{margin-top:0}.third-fourth-reference{margin-bottom:20px}}
+
+/* ===== MAPENDOS ADMIN LOGIN / CLEAN PANEL ===== */
+.admin-page{background:#050608!important;overflow:hidden}
+.admin-page .admin-main,.admin-page .admin-content,.admin-page .admin-sidebar{background:#050608!important}
+.admin-page .admin-main>header{background:#050608!important;box-shadow:0 8px 25px rgba(0,0,0,.35)}
+.admin-page .admin-view,.admin-page .admin-card,.admin-page .admin-welcome,.admin-page .stat-grid>div,.admin-page .team-editor-grid>*{background-color:#090a0e}
+.admin-login{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,rgba(255,198,43,.08),transparent 28%),#030405;padding:20px}
+.admin-login.hidden{display:none}
+.admin-login-card{width:min(420px,92vw);padding:34px 30px;background:linear-gradient(180deg,#0e1015,#07080b);border:1px solid rgba(255,198,43,.28);box-shadow:0 30px 100px rgba(0,0,0,.7);text-align:center}
+.admin-login-mark{width:58px;height:58px;margin:0 auto 14px;border:1px solid #b18a28;border-radius:50%;display:grid;place-items:center;color:#ffd45a;font:900 30px 'Barlow Condensed';box-shadow:0 0 30px rgba(255,198,43,.08)}
+.admin-login-card>span{color:#9a9ca4;font:800 8px 'Barlow Condensed';letter-spacing:2px}
+.admin-login-card h1{margin:6px 0;font:900 36px 'Barlow Condensed';letter-spacing:1px;color:#fff}
+.admin-login-card p{margin:0 0 20px;color:#777b84;font:500 11px Inter}
+.admin-login-card form{display:grid;gap:10px;text-align:left}
+.admin-login-card label{color:#888d96;font:800 9px 'Barlow Condensed';letter-spacing:1.5px}
+.admin-login-card input{display:block;width:100%;box-sizing:border-box;margin-top:6px;background:#050608;border:1px solid #2d3038;color:#fff;padding:13px;outline:0;font:600 12px Inter}
+.admin-login-card input:focus{border-color:#c69a2f;box-shadow:0 0 0 2px rgba(255,198,43,.08)}
+.admin-login-card button{width:100%;padding:13px;cursor:pointer}
+.admin-login-card small{min-height:14px;text-align:center;color:#ef5362;font:600 9px Inter}
+.admin-page .admin-sidebar{border-right-color:#1c1e24!important}
+.admin-page .admin-content{background:#050608!important}
+.admin-page .admin-view{background:transparent!important}
+.admin-page .banned-system{background:#0a0809!important}
+.admin-page .kills-entry-form,.admin-page .kills-admin-panel{background:#090a0e!important}
+
+/* ===== HOME MAPENDOS WORDMARK ===== */
+.home-inner h1{font-family:'Bebas Neue','Barlow Condensed',sans-serif!important;font-weight:400!important;letter-spacing:3px!important;transform:scaleX(1.02);text-shadow:0 5px 24px rgba(0,0,0,.45),1px 1px 0 rgba(255,198,43,.12)}
+
+/* ===== KILLS RANKING: SHADOW ESPORTS SILHOUETTE + NO BLEED ===== */
+.kills-screen{background:radial-gradient(circle at 50% 10%,rgba(255,198,43,.08),transparent 30%),linear-gradient(145deg,#07080b,#030405 58%,#08070a)!important;color:#fff!important}
+.kills-screen:before,.kills-screen:after{opacity:.25!important;filter:blur(.2px)}
+.kills-screen .kills-ranking-grid:before{display:none}
+.kill-card{background:linear-gradient(180deg,#11141a,#080a0e)!important;border:1px solid rgba(255,255,255,.11)!important;clip-path:none!important;border-radius:4px;box-shadow:0 18px 40px rgba(0,0,0,.42)!important}
+.kill-card:hover{transform:translateY(-5px)!important}
+.kill-card-top{background:#11141a!important;border-bottom:1px solid rgba(255,255,255,.08);color:#fff}
+.kill-card.rank-1 .kill-card-top{background:linear-gradient(90deg,#6e0c17,#16181e)!important}
+.kill-card.rank-2 .kill-card-top,.kill-card.rank-3 .kill-card-top,.kill-card.rank-other .kill-card-top{background:#11141a!important}
+.kill-avatar{height:275px!important;background:radial-gradient(ellipse at 50% 35%,rgba(255,255,255,.07),transparent 46%),linear-gradient(180deg,#141820,#080a0e)!important}
+.esport-silhouette{position:relative;width:190px;height:250px;filter:drop-shadow(0 14px 22px rgba(0,0,0,.5));opacity:.92}
+.esport-silhouette:before{content:"";position:absolute;width:70px;height:82px;left:60px;top:17px;border-radius:50% 48% 45% 45%;background:linear-gradient(145deg,#303640,#080a0d)}
+.esport-silhouette:after{content:"";position:absolute;width:120px;height:155px;left:35px;top:84px;background:linear-gradient(145deg,#343b45,#080a0d);clip-path:polygon(29% 0,71% 0,86% 16%,100% 100%,0 100%,14% 16%)}
+.esport-silhouette i,.esport-silhouette b{position:absolute;display:block;background:#11151b;border-radius:30px}
+.esport-silhouette i{width:42px;height:135px;left:18px;top:94px;transform:rotate(25deg);box-shadow:112px 15px 0 #11151b}
+.esport-silhouette b{width:35px;height:112px;left:52px;top:218px;transform:rotate(7deg);box-shadow:51px -1px 0 #11151b}
+.kill-card-bottom{background:#07090c!important;border-top:1px solid rgba(255,255,255,.07)}
+.kill-card-bottom strong{color:#fff}.kill-card-bottom small{color:#7f8791}.kill-card-bottom>b{color:#ffd45a}
+.kills-footer-note{background:rgba(8,9,13,.92)!important;border:1px solid rgba(255,255,255,.08)!important;border-left:3px solid #c99d36!important}
+.kills-empty{background:#090b0f!important;border-color:#242730!important;color:#777!important}
+
+/* ===== TOTAL KILL TABLE ===== */
+.kills-total-section{max-width:1180px;margin:22px auto 0;border:1px solid rgba(255,255,255,.09);background:linear-gradient(180deg,rgba(12,14,18,.96),rgba(6,7,10,.96));box-shadow:0 18px 50px rgba(0,0,0,.28)}
+.kills-total-head{display:flex;justify-content:space-between;align-items:end;gap:20px;padding:18px 20px;border-bottom:1px solid #242730}
+.kills-total-head span{font:800 8px 'Barlow Condensed';letter-spacing:2px;color:#9a8a61}
+.kills-total-head h2{margin:3px 0 0;font:900 25px 'Barlow Condensed';letter-spacing:1px;color:#fff}
+.kills-total-head small{color:#727781;font:500 9px Inter}
+.kills-total-row{display:grid;grid-template-columns:55px 1fr 120px;align-items:center;gap:12px;padding:11px 16px;border-top:1px solid #1d2026}
+.kills-total-row>span:first-child{color:#666d77;font:900 9px 'Barlow Condensed'}
+.kills-total-row b{display:block;color:#fff;font:800 12px Inter}
+.kills-total-row small{display:block;color:#666e79;font:500 8px Inter;margin-top:3px}
+.kills-total-row strong{text-align:right;color:#ffd45a;font:900 20px 'Barlow Condensed'}
+.kills-total-row-head{border-top:0;background:#11141a;color:#747b85;font:800 8px 'Barlow Condensed';letter-spacing:2px}
+.kills-total-row-head span:last-child{text-align:right}
+.kills-total-empty{padding:28px;text-align:center;color:#666;font:600 10px Inter}
+@media(max-width:620px){.kills-total-head{display:block}.kills-total-head small{display:block;margin-top:7px}.kills-total-row{grid-template-columns:35px 1fr 70px}.kills-total-row strong{font-size:18px}.esport-silhouette{transform:scale(.88)}}
