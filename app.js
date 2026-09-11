@@ -498,7 +498,25 @@ function setupAdmin(){
   const saveLive=document.querySelector('#saveLive');if(saveLive)saveLive.onclick=()=>{state.live.idp=document.querySelector('#admin-live-idp')?.value||'';state.live.ime=document.querySelector('#admin-live-ime')?.value||'';save();renderLive()};
   const exp=document.querySelector('#exportData');if(exp)exp.onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));a.download='mapendos-backup.json';a.click()};
   const imp=document.querySelector('#importData');if(imp)imp.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=normalize(JSON.parse(r.result));save();renderAll();renderParticipantList()}catch{alert('JSON tidak valid')}};r.readAsText(f)};
-  const reset=document.querySelector('#resetAdmin');if(reset)reset.onclick=()=>{if(confirm('Reset semua data?')){state=clone(DEFAULT);save();renderAll();renderParticipantList()}}
+  const reset=document.querySelector('#resetAdmin');if(reset)reset.onclick=()=>{if(confirm('Reset tampilan/data lokal ke default? Data Redis juga akan ditimpa jika disimpan.')){state=clone(DEFAULT);save();renderAll();renderParticipantList()}};
+
+  async function destructiveReset(action, message, applyLocal){
+    if(!getAdminPassword()){ alert('Sesi Admin tidak ditemukan. Silakan login ulang.'); return; }
+    if(!confirm(message)) return;
+    if(action==='reset_all' && !confirm('KONFIRMASI TERAKHIR\n\nSemua team, bracket, hasil, live, banned, dan kills akan dihapus permanen. Lanjutkan?')) return;
+    try{
+      const r=await fetch(API_STATE,{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Password':getAdminPassword()},body:JSON.stringify({action})});
+      const data=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(data.error||('API '+r.status));
+      if(action==='reset_all'){ state=clone(DEFAULT); localStorage.setItem(KEY,JSON.stringify(state)); remoteUpdatedAt=null; }
+      else if(data.state){ state=normalize(data.state); localStorage.setItem(KEY,JSON.stringify(state)); remoteUpdatedAt=data.state.updatedAt||null; }
+      else if(applyLocal) applyLocal();
+      remoteReady=true; renderAll(); renderParticipantList(); alert('Data berhasil dihapus.');
+    }catch(err){ alert('Gagal menghapus data: '+err.message); }
+  }
+  const rk=document.querySelector('#resetKillsData');if(rk)rk.onclick=()=>destructiveReset('reset_kills','Hapus SEMUA data Kill Ranking? Data Top 5 dan Total Kill akan kosong.',()=>{state.killsRanking=clone(DEFAULT.killsRanking)});
+  const rt=document.querySelector('#resetTournamentData');if(rt)rt.onclick=()=>destructiveReset('reset_tournament','Reset tournament? Semua team, roster, bracket, hasil, dan banned player akan dihapus.',()=>{state.teams=clone(DEFAULT.teams);state.scores={};state.winners={};state.banned=[]});
+  const ra=document.querySelector('#resetAllData');if(ra)ra.onclick=()=>destructiveReset('reset_all','HAPUS SEMUA DATA? Aksi ini menghapus seluruh data website dari Upstash Redis.',()=>{state=clone(DEFAULT)});
 }
 setupNav();
 const isAdminPage=!!document.querySelector('.admin-page');
