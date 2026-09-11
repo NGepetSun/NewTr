@@ -1,5 +1,5 @@
 const TEAM_COUNT=16;
-const DEFAULT={teams:Array.from({length:TEAM_COUNT},(_,i)=>({name:`MPD ${String.fromCharCode(65+i)}`,side:'mixed',players:[]})),scores:{},winners:{},live:{idp:'',ime:''},banned:[],killsRanking:{matchLabel:'ALL MATCHES',weekLabel:'WEEK 1',seasonLabel:'REGULAR SEASON',matches:[]}};
+const DEFAULT={teams:Array.from({length:TEAM_COUNT},(_,i)=>({name:`MPD ${String.fromCharCode(65+i)}`,side:'mixed',players:[]})),bracketOrder:Array.from({length:TEAM_COUNT},(_,i)=>i),scores:{},winners:{},live:{idp:'',ime:''},banned:[],killsRanking:{matchLabel:'ALL MATCHES',weekLabel:'WEEK 1',seasonLabel:'REGULAR SEASON',matches:[]}};
 const KEY='mapendos-v9-pages';
 const API_STATE='/api/state';
 let remoteReady=false;
@@ -19,10 +19,13 @@ function normalize(raw){
       return {name:v??'',side:i<4?'idp':i<8?'ime':''};
     }):[]
   }));
+  const bracketOrder=Array.isArray(x.bracketOrder)&&x.bracketOrder.length?x.bracketOrder.map(Number).filter(i=>Number.isInteger(i)&&i>=0&&i<teamCount):d.bracketOrder.slice();
+  const uniqueOrder=[...new Set(bracketOrder)];
+  for(let i=0;i<teamCount;i++)if(!uniqueOrder.includes(i))uniqueOrder.push(i);
   const kr=x.killsRanking&&typeof x.killsRanking==='object'?x.killsRanking:{};
   let matches=Array.isArray(kr.matches)?kr.matches.map(m=>({matchLabel:String(m?.matchLabel??'MATCH'),entries:Array.isArray(m?.entries)?m.entries.map(v=>({name:String(v?.name??''),kills:Math.max(0,Math.floor(Number(v?.kills)||0)),team:String(v?.team??''),side:String(v?.side??'')})).filter(v=>v.name).slice(0,5):[]})).filter(m=>m.entries.length||m.matchLabel):[];
   if(!matches.length&&Array.isArray(kr.entries)&&kr.entries.length)matches=[{matchLabel:String(kr.matchLabel??d.killsRanking.matchLabel),entries:kr.entries.map(v=>({name:String(v?.name??''),kills:Math.max(0,Math.floor(Number(v?.kills)||0)),team:String(v?.team??''),side:String(v?.side??'')})).filter(v=>v.name).slice(0,5)}];
-  return {teams,scores:x.scores||{},winners:x.winners||{},live:{...d.live,...(x.live||{})},banned:(()=>{const b=Array.isArray(x.banned)?x.banned:[]; const flat=[]; b.forEach(v=>{if(Array.isArray(v)) v.forEach(n=>{if(n&&!flat.includes(n))flat.push(n)}); else if(typeof v==='string'&&v&&!flat.includes(v))flat.push(v)}); return flat})(),killsRanking:{matchLabel:String(kr.matchLabel??d.killsRanking.matchLabel),weekLabel:String(kr.weekLabel??d.killsRanking.weekLabel),seasonLabel:String(kr.seasonLabel??d.killsRanking.seasonLabel),matches}};
+  return {teams,bracketOrder:uniqueOrder,scores:x.scores||{},winners:x.winners||{},live:{...d.live,...(x.live||{})},banned:(()=>{const b=Array.isArray(x.banned)?x.banned:[]; const flat=[]; b.forEach(v=>{if(Array.isArray(v)) v.forEach(n=>{if(n&&!flat.includes(n))flat.push(n)}); else if(typeof v==='string'&&v&&!flat.includes(v))flat.push(v)}); return flat})(),killsRanking:{matchLabel:String(kr.matchLabel??d.killsRanking.matchLabel),weekLabel:String(kr.weekLabel??d.killsRanking.weekLabel),seasonLabel:String(kr.seasonLabel??d.killsRanking.seasonLabel),matches}};
 }
 let state;try{state=normalize(JSON.parse(localStorage.getItem(KEY)||'null'))}catch{state=clone(DEFAULT)}
 if(!state||!Array.isArray(state.teams))state=clone(DEFAULT);
@@ -61,7 +64,8 @@ const winner=(k,a,b)=>{
 };
 const loser=(k,a,b)=>{const w=state.winners[k];return !w?'TBD':w===a?b:a};
 function matches(){
-  const t=state.teams.map(x=>x.name||'TBD');
+  const order=Array.isArray(state.bracketOrder)?state.bracketOrder:state.teams.map((_,i)=>i);
+  const t=order.map(i=>state.teams[i]?.name||'TBD');
   const n=t.length, size=2**Math.ceil(Math.log2(Math.max(2,n)));
   const slots=[...t,...Array(size-n).fill('TBD')];
   const rounds=[];
@@ -316,19 +320,22 @@ function shufflePlayers(){
 }
 function shuffleBracket(){
   if(!Array.isArray(state.teams) || state.teams.length<2){ alert('Minimal 2 team diperlukan untuk mengocok bracket.'); return; }
-  const teams=[...state.teams];
-  for(let i=teams.length-1;i>0;i--){
+  const order=Array.isArray(state.bracketOrder)&&state.bracketOrder.length===state.teams.length
+    ? [...state.bracketOrder]
+    : state.teams.map((_,i)=>i);
+  for(let i=order.length-1;i>0;i--){
     const j=Math.floor(Math.random()*(i+1));
-    [teams[i],teams[j]]=[teams[j],teams[i]];
+    [order[i],order[j]]=[order[j],order[i]];
   }
-  state.teams=teams;
+  state.bracketOrder=order;
   state.winners={};
   state.scores={};
   save();
   renderAll();
   const note=document.querySelector('#bracketShuffleNote');
   if(note){
-    note.textContent='Bracket berhasil dikocok. Pasangan Round 1 diacak ulang tanpa mengubah roster setiap team.';
+    note.textContent='Bracket berhasil dikocok. Pasangan Round 1 diacak ulang tanpa memindahkan roster dari team masing-masing.';
+    note.classList.remove('warn');
     note.classList.add('success');
   }
 }
@@ -342,7 +349,7 @@ function renderResults(){
   const third=ms.find(m=>m[0]==='third');
   el.innerHTML=`<div class="bracket-reference-board admin-result-board">
     ${roundKeys.map((r,idx)=>`<div class="bracket-round round-${idx===0?'q':idx===roundKeys.length-1?'g':'s'}" data-round="${r}"><div class="col-title">${idx===roundKeys.length-1?'GRAND FINAL':idx===roundKeys.length-2?'SEMI FINAL':idx===roundKeys.length-3?'QUARTER FINAL':'ROUND OF 16'}</div>${rounds[r].map(m=>`<div class="match-slot">${refCard(m,true)}</div>`).join('')}</div>`).join('')}
-    <div class="champion-reference"><span>CHAMPION</span><div>🏆</div><strong>${esc(winner('r4m1', rounds['4']?.[0]?.[2]||'TBD', rounds['4']?.[0]?.[3]||'TBD'))}</strong><small>JUARA 1</small></div>
+    <div class="champion-reference"><span>CHAMPION</span><div>🏆</div><strong>${esc((()=>{const finalRound=rounds[roundKeys.at(-1)]?.[0];return finalRound?winner(finalRound[0],finalRound[2],finalRound[3]):'TBD'})())}</strong><small>JUARA 1</small></div>
   </div>
   <div class="admin-third-place">
     <div class="third-place-head"><div><span>PLACEMENT MATCH</span><h4>3RD PLACE MATCH</h4><small>Perebutan Juara 3 &amp; 4 — pemenang mendapat JUARA 3, yang kalah JUARA 4.</small></div><b>🥉</b></div>
@@ -490,7 +497,7 @@ function setupRosterModal(){
 function setupAdminLogin(){
   const gate=document.querySelector('#adminLogin'); if(!gate)return true;
   const stored=getAdminPassword();
-  if(stored) gate.classList.add('hidden');
+  if(stored){ gate.classList.add('hidden'); gate.setAttribute('aria-hidden','true'); }
   const form=document.querySelector('#adminLoginForm'), input=document.querySelector('#adminPassword'), err=document.querySelector('#adminLoginError');
   form?.addEventListener('submit',async e=>{
     e.preventDefault(); const password=input?.value||''; if(!password)return;
@@ -498,7 +505,7 @@ function setupAdminLogin(){
       const r=await fetch(API_STATE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'auth',password})});
       if(!r.ok) throw new Error('Invalid password');
       sessionStorage.setItem('mapendos-admin-password',password);
-      gate.classList.add('hidden'); if(err)err.textContent='';
+      gate.classList.add('hidden'); gate.setAttribute('aria-hidden','true'); if(err)err.textContent='';
       if(typeof setupAdmin==='function') setupAdmin();
       if(typeof setupBannedSystem==='function') setupBannedSystem();
       if(typeof bindKillsAdmin==='function') bindKillsAdmin();
@@ -534,9 +541,21 @@ function setupAdmin(){
     }catch(err){ alert('Gagal menghapus data: '+err.message); }
   }
   const rk=document.querySelector('#resetKillsData');if(rk)rk.onclick=()=>destructiveReset('reset_kills','Hapus SEMUA data Kill Ranking? Data Top 5 dan Total Kill akan kosong.',()=>{state.killsRanking=clone(DEFAULT.killsRanking)});
-  const rt=document.querySelector('#resetTournamentData');if(rt)rt.onclick=()=>destructiveReset('reset_tournament','Reset tournament? Semua team, roster, bracket, hasil, dan banned player akan dihapus.',()=>{state.teams=clone(DEFAULT.teams);state.scores={};state.winners={};state.banned=[]});
+  const rt=document.querySelector('#resetTournamentData');if(rt)rt.onclick=()=>destructiveReset('reset_tournament','Reset tournament? Semua team, roster, bracket, hasil, dan banned player akan dihapus.',()=>{state.teams=clone(DEFAULT.teams);state.bracketOrder=clone(DEFAULT.bracketOrder);state.scores={};state.winners={};state.banned=[]});
   const ra=document.querySelector('#resetAllData');if(ra)ra.onclick=()=>destructiveReset('reset_all','HAPUS SEMUA DATA? Aksi ini menghapus seluruh data website dari Upstash Redis.',()=>{state=clone(DEFAULT)});
 }
+function setupPremiumUX(){
+  document.documentElement.classList.add('js-ready');
+  requestAnimationFrame(()=>document.body.classList.add('page-ready'));
+  document.querySelectorAll('a,button').forEach(el=>{
+    el.addEventListener('click',()=>{el.classList.remove('ux-pulse');void el.offsetWidth;el.classList.add('ux-pulse')},{passive:true});
+  });
+  document.querySelectorAll('.match-card-ref,.kill-card,.roster-card,.stream-card,.stat-grid>div').forEach((el,i)=>{
+    el.style.setProperty('--reveal-delay',`${Math.min(i,12)*35}ms`);
+    el.classList.add('premium-reveal');
+  });
+}
+setupPremiumUX();
 setupNav();
 const isAdminPage=!!document.querySelector('.admin-page');
 if(!isAdminPage || getAdminPassword()){

@@ -282,3 +282,113 @@ footer{height:54px;display:grid;place-items:center;background:#030305;border-top
 @media(max-width:620px){.danger-actions{grid-template-columns:1fr}.danger-zone{padding:14px}}
 
 #bracketShuffleNote{margin-bottom:14px}
+
+/* =========================================================
+   MAPENDOS PREMIUM UI/UX LAYER — non-destructive override
+   Keeps existing markup, assets and framework intact.
+   ========================================================= */
+:root{
+  --premium-bg:#050608;
+  --premium-panel:rgba(13,15,20,.82);
+  --premium-line:rgba(255,255,255,.09);
+  --premium-gold:#f3ca58;
+  --premium-gold-soft:#b98c2d;
+  --premium-red:#d71935;
+  --premium-text:#f5f5f2;
+  --premium-muted:#858b95;
+}
+html{scroll-behavior:smooth;background:var(--premium-bg)}
+body{background:var(--premium-bg);color:var(--premium-text);text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:9997;background:linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px);background-size:72px 72px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.45),transparent 80%)}
+.grain{opacity:.035!important;mix-blend-mode:screen}
+.topbar{height:72px!important;background:rgba(5,6,8,.78)!important;border-bottom:1px solid var(--premium-line)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);position:sticky;top:0;z-index:1000;box-shadow:0 10px 40px rgba(0,0,0,.22)}
+.logo-word strong{font-family:'Bebas Neue','Barlow Condensed',sans-serif!important;font-size:30px!important;letter-spacing:3px!important;line-height:.8!important;text-shadow:0 0 22px rgba(243,202,88,.09)}
+.logo-word span{letter-spacing:2.5px!important;color:#898e97!important}
+.topbar nav a{position:relative;transition:color .22s ease,transform .22s ease}
+.topbar nav a:after{content:"";position:absolute;left:50%;bottom:-8px;width:0;height:1px;background:linear-gradient(90deg,transparent,var(--premium-gold),transparent);transform:translateX(-50%);transition:width .25s ease}
+.topbar nav a:hover{color:#fff!important;transform:translateY(-1px)}
+.topbar nav a:hover:after,.topbar nav a.active:after{width:72%}
+.admin-link{border-color:rgba(243,202,88,.22)!important;background:rgba(243,202,88,.035)!important;transition:.25s ease}
+.admin-link:hover{border-color:rgba(243,202,88,.55)!important;background:rgba(243,202,88,.08)!important;transform:translateY(-1px)}
+
+/* Home — premium editorial hero */
+.home-screen{position:relative;isolation:isolate;min-height:calc(100vh - 72px)!important;background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.045),transparent 24%),radial-gradient(circle at 12% 70%,rgba(215,25,53,.11),transparent 28%),radial-gradient(circle at 88% 30%,rgba(122,56,255,.09),transparent 30%),#050608!important}
+.home-screen:before{content:"";position:absolute;inset:7%;border:1px solid rgba(255,255,255,.045);clip-path:polygon(0 0,100% 0,100% 82%,82% 100%,18% 100%,0 82%);pointer-events:none}
+.home-inner{position:relative;z-index:2}
+.home-kicker{letter-spacing:5px!important;color:#a99255!important}
+.home-screen h1{font-family:'Bebas Neue',sans-serif!important;font-weight:400!important;letter-spacing:7px!important;line-height:.82!important;font-size:clamp(100px,15vw,220px)!important;text-shadow:0 2px 0 rgba(255,255,255,.05),0 24px 70px rgba(0,0,0,.55)!important}
+.home-tag{letter-spacing:5px!important;color:#9b9fa7!important}
+.family-card{border:1px solid rgba(255,255,255,.09)!important;background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.012))!important;box-shadow:0 25px 70px rgba(0,0,0,.35)!important;transition:transform .35s cubic-bezier(.2,.8,.2,1),border-color .35s ease,box-shadow .35s ease!important}
+.family-card:hover{transform:translateY(-7px)!important;border-color:rgba(243,202,88,.34)!important;box-shadow:0 35px 80px rgba(0,0,0,.5),0 0 35px rgba(243,202,88,.05)!important}
+.family-card img{filter:saturate(.85) contrast(1.08)!important}
+.versus{font-family:'Bebas Neue',sans-serif!important;color:var(--premium-gold)!important;text-shadow:0 0 25px rgba(243,202,88,.16)}
+.date-banner{border:1px solid rgba(243,202,88,.18)!important;background:rgba(8,9,12,.72)!important;box-shadow:0 18px 50px rgba(0,0,0,.25)!important;backdrop-filter:blur(12px)}
+.date-banner strong{font-family:'Bebas Neue',sans-serif!important;letter-spacing:2px!important}
+.home-prize{border-top:1px solid var(--premium-line)!important;background:linear-gradient(180deg,rgba(8,9,12,.78),rgba(5,6,8,.94))!important;backdrop-filter:blur(14px)}
+.home-prize>div{border-right-color:var(--premium-line)!important;transition:background .25s ease,transform .25s ease}
+.home-prize>div:hover{background:rgba(243,202,88,.035);transform:translateY(-2px)}
+
+/* Shared section hierarchy */
+.screen{position:relative;isolation:isolate}
+.section-title h2,.bracket-header-clean h2{font-family:'Bebas Neue','Barlow Condensed',sans-serif!important;letter-spacing:2px!important;text-shadow:0 8px 28px rgba(0,0,0,.35)}
+.section-title>div>span,.bracket-header-clean span{letter-spacing:3px!important;color:#9b8a5e!important}
+
+/* Bracket — sharper tournament control room */
+.bracket-screen{background:radial-gradient(circle at 45% 30%,rgba(243,202,88,.035),transparent 25%),#050608!important}
+.bracket-reference-board{border:1px solid rgba(255,255,255,.08)!important;background:linear-gradient(180deg,rgba(11,13,17,.94),rgba(5,6,8,.96))!important;box-shadow:0 30px 90px rgba(0,0,0,.45)!important}
+.bracket-round .col-title{font-size:10px!important;letter-spacing:2.5px!important;color:#a6aab2!important}
+.match-card-ref{border:1px solid rgba(255,255,255,.10)!important;background:linear-gradient(180deg,#12151b,#090b0f)!important;box-shadow:0 12px 28px rgba(0,0,0,.28)!important;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease!important}
+.match-card-ref:hover{transform:translateY(-2px);border-color:rgba(243,202,88,.32)!important;box-shadow:0 18px 35px rgba(0,0,0,.4),0 0 20px rgba(243,202,88,.04)!important}
+.match-card-ref .team-row{transition:background .2s ease,color .2s ease}
+.match-card-ref .team-row:hover{background:rgba(255,255,255,.035)}
+.champion-reference{border:1px solid rgba(243,202,88,.28)!important;background:linear-gradient(160deg,rgba(243,202,88,.10),rgba(8,9,12,.95) 45%)!important;box-shadow:0 25px 60px rgba(0,0,0,.38),0 0 35px rgba(243,202,88,.04)!important}
+.champion-reference strong{font-family:'Bebas Neue',sans-serif!important;letter-spacing:1px!important}
+.placement-strip>div{border:1px solid rgba(255,255,255,.08)!important;background:rgba(10,12,16,.82)!important;transition:.25s ease}
+.placement-strip>div:hover{border-color:rgba(243,202,88,.25)!important;transform:translateY(-2px)}
+
+/* Live / roster */
+.stream-card,.roster-card{border:1px solid rgba(255,255,255,.09)!important;background:linear-gradient(180deg,rgba(16,18,23,.94),rgba(7,8,11,.96))!important;box-shadow:0 20px 55px rgba(0,0,0,.3)!important;transition:transform .3s cubic-bezier(.2,.8,.2,1),border-color .3s ease,box-shadow .3s ease!important}
+.stream-card:hover,.roster-card:hover{transform:translateY(-5px);border-color:rgba(243,202,88,.22)!important;box-shadow:0 30px 70px rgba(0,0,0,.45)!important}
+.stream-thumb{filter:contrast(1.08) saturate(.88)}
+.live-badge{box-shadow:0 0 20px rgba(215,25,53,.14)!important}
+
+/* Kills ranking */
+.kills-screen{background:radial-gradient(circle at 50% 5%,rgba(243,202,88,.045),transparent 25%),#050608!important}
+.kills-hero h1{font-family:'Bebas Neue',sans-serif!important;letter-spacing:3px!important;font-size:clamp(72px,10vw,140px)!important}
+.kills-hero h1 span{background:linear-gradient(100deg,#f3ca58 0%,#fff 46%,#d71935 100%)!important;-webkit-background-clip:text!important;background-clip:text!important}
+.kill-card{border-color:rgba(255,255,255,.10)!important;box-shadow:0 22px 55px rgba(0,0,0,.38)!important;transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s ease,border-color .3s ease!important}
+.kill-card:hover{transform:translateY(-7px)!important;border-color:rgba(243,202,88,.25)!important;box-shadow:0 35px 75px rgba(0,0,0,.52)!important}
+.kill-card.rank-1:hover{transform:translateY(-9px)!important}
+.kill-avatar{background:radial-gradient(circle at 50% 30%,rgba(243,202,88,.07),transparent 38%),linear-gradient(160deg,#161a21,#07090d)!important}
+.esport-silhouette{filter:drop-shadow(0 20px 28px rgba(0,0,0,.55))!important;opacity:.84!important}
+
+/* Admin — command center */
+.admin-page{background:#050608!important}
+.admin-sidebar{border-right:1px solid rgba(255,255,255,.07)!important;background:rgba(7,8,11,.92)!important;backdrop-filter:blur(18px)}
+.admin-brand b{font-family:'Bebas Neue',sans-serif!important;letter-spacing:3px!important}
+.admin-sidebar nav button{border:1px solid transparent!important;transition:.22s ease!important}
+.admin-sidebar nav button:hover{background:rgba(255,255,255,.035)!important;color:#fff!important;transform:translateX(2px)}
+.admin-sidebar nav button.active{border-color:rgba(243,202,88,.16)!important;background:linear-gradient(90deg,rgba(243,202,88,.08),rgba(243,202,88,.015))!important;box-shadow:inset 2px 0 var(--premium-gold)}
+.admin-main>header{border-bottom:1px solid rgba(255,255,255,.07)!important}
+.admin-view{animation:adminViewIn .3s ease both}
+.admin-welcome,.stat-grid>div,.admin-card,.team-editor-grid>*,.banned-system,.kills-admin-panel,.settings-actions{border-color:rgba(255,255,255,.08)!important;box-shadow:0 16px 45px rgba(0,0,0,.16)}
+.gold-action,.shuffle-action{transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease!important}
+.gold-action:hover,.shuffle-action:hover{transform:translateY(-2px)!important;box-shadow:0 12px 28px rgba(0,0,0,.28)!important}
+.danger-zone{box-shadow:0 20px 60px rgba(0,0,0,.28)!important}
+
+/* Micro interactions */
+button,a,.family-card,.stream-card,.roster-card,.kill-card,.match-card-ref{will-change:transform}
+.ux-pulse{animation:uxPulse .24s ease}
+.premium-reveal{opacity:0;transform:translateY(10px);animation:premiumReveal .55s cubic-bezier(.2,.75,.2,1) forwards;animation-delay:var(--reveal-delay,0ms)}
+body:not(.page-ready) .premium-reveal{opacity:0}
+@keyframes premiumReveal{to{opacity:1;transform:none}}
+@keyframes uxPulse{50%{transform:scale(.985)}}
+@keyframes adminViewIn{from{opacity:.65;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.premium-reveal{animation:none;opacity:1;transform:none}.ux-pulse,.admin-view{animation:none!important}*{transition-duration:.01ms!important}}
+@media(max-width:800px){
+  .topbar{height:64px!important}
+  .home-screen h1{font-size:clamp(72px,22vw,140px)!important;letter-spacing:4px!important}
+  .home-screen:before{inset:3%}
+  .bracket-reference-board{box-shadow:none!important}
+  .kills-hero h1{font-size:clamp(58px,18vw,100px)!important}
+}
