@@ -3,6 +3,11 @@ const { Redis } = require('@upstash/redis');
 const redis = Redis.fromEnv();
 const KEY = 'mapendos:tournament:v1';
 
+const REFERENCE_LEFT=[['lele','marcel','rigel'],['gin','jiro','kenan'],['joler','laura','wansu'],['eki','ical','xyn'],['jalu','loak','ales'],['dilan','limz','weldan'],['natan','kairi','kla'],['gaga','aran','jucki'],['depan','showie','jexy'],['caesar','beryl','zar'],['sam','jefrey','goreng']];
+const REFERENCE_RIGHT=[['crusher','jepri'],['tatan','mattew'],['moza','kyuzin'],['clay','rey'],['iban','rexpi'],['iponge','jhon'],['cello','dokong'],['torik','memet'],['bons','wisnu'],['febri','eko'],['petrus','robby']];
+const referenceTeams=()=>REFERENCE_LEFT.map((a,i)=>({name:`MPD ${String.fromCharCode(65+i)}`,side:'mixed',players:[...a.map(name=>({name,side:'idp'})),...REFERENCE_RIGHT[i].map(name=>({name,side:'ime'}))]})).concat(Array.from({length:5},(_,i)=>({name:`MPD ${String.fromCharCode(76+i)}`,side:'mixed',players:[]})));
+const hasPlayers=teams=>Array.isArray(teams)&&teams.some(t=>Array.isArray(t?.players)&&t.players.some(p=>String((typeof p==='object'?p?.name:p)||'').trim()&&p!=='TBD'));
+
 const DEFAULT = {
   teams: Array.from({ length: 16 }, (_, i) => ({
     name: `MPD ${String.fromCharCode(65 + i)}`,
@@ -30,7 +35,10 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') {
       let state = await redis.get(KEY);
       if (!state) {
-        state = { ...DEFAULT, updatedAt: new Date().toISOString() };
+        state = { ...DEFAULT, teams: referenceTeams(), bracketOrder: Array.from({length:11},(_,i)=>i), updatedAt: new Date().toISOString() };
+        await redis.set(KEY, state);
+      } else if (!hasPlayers(state.teams)) {
+        state = { ...state, teams: referenceTeams(), bracketOrder: Array.from({length:11},(_,i)=>i), updatedAt: new Date().toISOString() };
         await redis.set(KEY, state);
       }
       return res.status(200).json(state);
@@ -86,7 +94,7 @@ module.exports = async (req, res) => {
         teams: body.teams.slice(0, 16).map((team, i) => ({
           name: `MPD ${String.fromCharCode(65 + i)}`,
           side: 'mixed',
-          players: Array.isArray(team.players) ? team.players.slice(0, 5) : []
+          players: Array.isArray(team.players) ? team.players : []
         })),
         bracketOrder,
         scores: body.scores && typeof body.scores === 'object' ? body.scores : {},
