@@ -629,7 +629,7 @@ function setupRosterModal(){
 function setupAdminLogin(){
   const gate=document.querySelector('#adminLogin'); if(!gate)return true;
   const stored=getAdminPassword();
-  if(stored){ gate.classList.add('hidden'); gate.setAttribute('aria-hidden','true'); }
+  if(stored){ document.body.classList.add('admin-unlocked'); gate.classList.add('hidden'); gate.setAttribute('aria-hidden','true'); }
   const form=document.querySelector('#adminLoginForm'), input=document.querySelector('#adminPassword'), err=document.querySelector('#adminLoginError');
   form?.addEventListener('submit',async e=>{
     e.preventDefault(); const password=input?.value||''; if(!password)return;
@@ -637,6 +637,7 @@ function setupAdminLogin(){
       const r=await fetch(API_STATE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'auth',password})});
       if(!r.ok) throw new Error('Invalid password');
       sessionStorage.setItem('mapendos-admin-password',password);
+      document.body.classList.add('admin-unlocked');
       gate.classList.add('hidden'); gate.setAttribute('aria-hidden','true'); if(err)err.textContent='';
       if(typeof setupAdmin==='function') setupAdmin();
       if(typeof setupRosterModal==='function') setupRosterModal();
@@ -649,7 +650,17 @@ function setupAdminLogin(){
 }
 
 function setupAdmin(){
-  document.querySelectorAll('.admin-sidebar nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.admin-sidebar nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.admin-view').forEach(v=>v.classList.toggle('active',v.dataset.view===b.dataset.tab))});
+  const navButtons=document.querySelectorAll('.admin-sidebar nav button');
+  navButtons.forEach(b=>{
+    b.onclick=(e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      navButtons.forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      document.querySelectorAll('.admin-view').forEach(v=>v.classList.toggle('active',v.dataset.view===b.dataset.tab));
+      document.querySelector('.admin-content')?.scrollTo({top:0,behavior:'smooth'});
+    };
+  });
   document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>document.querySelector(`.admin-sidebar nav button[data-tab="${b.dataset.jump}"]`)?.click());
   const clear=document.querySelector('#clearResults');if(clear)clear.onclick=()=>{state.winners={};state.scores={};save();renderAll()};
   const shuffleBracketBtn=document.querySelector('#shuffleBracket');if(shuffleBracketBtn)shuffleBracketBtn.onclick=shuffleBracket;

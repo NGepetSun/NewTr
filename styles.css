@@ -383,7 +383,9 @@ footer i{color:var(--gold-2);margin:0 10px}
 .admin-login{position:fixed;inset:0;z-index:200;display:grid;place-items:center;
   background:radial-gradient(ellipse at 30% 20%,rgba(255,51,88,.12),transparent 40%),
     radial-gradient(ellipse at 80% 80%,rgba(154,73,255,.12),transparent 42%),var(--ink)}
-.admin-login.hidden{display:none}
+.admin-login.hidden{display:none!important;pointer-events:none!important}
+.admin-login:not(.hidden){position:fixed!important;inset:0!important;z-index:99999!important;display:grid!important;pointer-events:auto!important}
+.admin-login:not(.hidden) *{pointer-events:auto}
 .admin-login-card{width:min(380px,92vw);padding:34px 28px;background:var(--surface);border:1px solid var(--line-strong);
   box-shadow:var(--shadow);clip-path:polygon(0 0,calc(100% - 22px) 0,100% 22px,100% 100%,0 100%)}
 .admin-login-mark{width:46px;height:46px;display:grid;place-items:center;margin-bottom:14px;
@@ -398,12 +400,12 @@ footer i{color:var(--gold-2);margin:0 10px}
 .admin-login-card small{display:block;margin-top:10px;color:var(--idp);font-size:10px;min-height:12px}
 
 .admin-page{min-height:100vh;background:var(--ink);color:var(--text);display:grid;grid-template-columns:230px 1fr}
-.admin-page .admin-sidebar{min-height:100vh;position:sticky;top:0;background:var(--surface);border-right:1px solid var(--line);
+.admin-page .admin-sidebar{min-height:100vh;position:sticky;top:0;z-index:50;background:var(--surface);border-right:1px solid var(--line);
   padding:24px 14px;display:flex;flex-direction:column}
 .admin-brand b{font:700 24px 'Rajdhani',sans-serif;text-transform:uppercase}
 .admin-brand small{display:block;color:var(--muted);font-size:7px;letter-spacing:2px;margin-top:2px}
 .admin-sidebar nav{margin-top:30px;display:flex;flex-direction:column;gap:2px}
-.admin-sidebar nav button{width:100%;background:none;border:0;border-left:2px solid transparent;color:var(--muted);
+.admin-sidebar nav button{position:relative;z-index:60;pointer-events:auto;width:100%;background:none;border:0;border-left:2px solid transparent;color:var(--muted);
   text-align:left;padding:13px 12px;font:600 11px 'Chakra Petch',sans-serif;letter-spacing:1px;cursor:pointer;transition:.15s}
 .admin-sidebar nav button.active,.admin-sidebar nav button:hover{color:#fff;background:var(--surface-2);border-left-color:var(--gold)}
 .admin-foot{margin-top:auto;color:var(--muted-2);font:600 9px 'Chakra Petch',sans-serif;line-height:1.9}
