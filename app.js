@@ -289,23 +289,83 @@ function addParticipants(names,side){
   applyDistribution(idp,ime);
   save();renderAll();renderParticipantList();renderBannedOptions();return added;
 }
-function removeParticipant(side,index){
+async function removeParticipant(side,index){
   const f=String(side).toLowerCase();
-  const s=getPool(),arr=f==='idp'?s.idp:s.ime;arr.splice(+index,1);
-  applyDistribution(f==='idp'?arr:s.idp,f==='ime'?arr:s.ime);
-  save();renderAll();renderParticipantList();renderBannedOptions();
+  const s=getPool(),arr=f==='idp'?s.idp:s.ime;
+  const i=Number(index);
+  if(!arr || !Number.isInteger(i) || i<0 || i>=arr.length)return;
+  const removed=arr[i];
+  arr.splice(i,1);
+  state.banned=state.banned.filter(n=>n!==removed);
+  applyDistribution(s.idp,s.ime);
+  state.bracketOrder=[];
+  state.winners={}; state.scores={};
+  await save();
+  renderAll();renderParticipantList();renderBannedOptions();
+}
+async function removeAllParticipants(){
+  const s=getPool();
+  if(!s.idp.length && !s.ime.length){
+    alert('Tidak ada player untuk dihapus.');
+    return;
+  }
+  if(!confirm(`Hapus semua ${s.idp.length+s.ime.length} player dari roster?\n\nTeam, bracket order, dan hasil pertandingan akan di-reset.`))return;
+  state.pools={idp:[],ime:[]};
+  state.banned=[];
+  state.teams=Array.from({length:TEAM_COUNT},(_,i)=>({name:teamLabel(i),side:'mixed',players:[]}));
+  state.bracketOrder=[];
+  state.winners={}; state.scores={};
+  await save();
+  renderAll();renderParticipantList();renderBannedOptions();
+  alert('Semua player berhasil dihapus.');
 }
 function shuffleArray(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}return arr}
-function shufflePlayers(){
+async function shufflePlayers(){
   const {idp,ime}=getPool();
   const total=idp.length+ime.length;
-  if(total<5||idp.length===0||ime.length===0){
-    alert('Kocok membutuhkan minimal 5 peserta dan roster IDP + IME harus sama-sama terisi.');return;
+  if(total<2){
+    alert('Minimal 2 player diperlukan untuk mengocok roster.');
+    return;
   }
-  // Shuffle remains available even when all 16 teams (80 slots) are full.
-  const res=applyDistribution(idp,ime);
-  state.winners={};state.scores={};save();renderAll();renderParticipantList();
-  const note=document.querySelector('#shuffleNote');
+  const btn=document.querySelector('#shufflePlayers');
+  if(btn){
+    btn.disabled=true;
+    btn.classList.add('is-loading');
+    btn.dataset.originalText=btn.textContent;
+    btn.textContent='⟳ MENGOCOK...';
+  }
+  try{
+    // IME + IDP are intentionally mixed into the same teams.
+    // Shuffle must work even when only one faction currently has players.
+    const res=applyDistribution(idp,ime);
+    state.bracketOrder=[];
+    state.winners={};
+    state.scores={};
+    await save();
+    renderAll();
+    renderParticipantList();
+    const note=document.querySelector('#shuffleNote');
+    if(note){
+      if(res.impossible){
+        note.textContent='Shuffle selesai. Batas Banned Player melebihi jumlah team yang tersedia, sehingga sebagian pasangan banned mungkin masih bertemu.';
+        note.classList.add('warn'); note.classList.remove('success');
+      }else if(res.conflict){
+        note.textContent='Shuffle selesai, tetapi constraint Banned Player belum dapat dipenuhi. Coba KOCOK PLAYER lagi.';
+        note.classList.add('warn'); note.classList.remove('success');
+      }else{
+        note.textContent='Player berhasil dikocok ke team campuran. Roster setiap team diperbarui dan disimpan.';
+        note.classList.add('success'); note.classList.remove('warn');
+      }
+    }
+  }finally{
+    if(btn){
+      btn.disabled=false;
+      btn.classList.remove('is-loading');
+      btn.textContent=btn.dataset.originalText||'⤨ KOCOK PLAYER';
+    }
+  }
+}
+function shuffleBracket(){
   if(note){
     const idpPer=Math.round(5*idp.length/total),imePer=5-idpPer;
     if(res.impossible){
@@ -491,8 +551,8 @@ function setupRosterModal(){
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeRosterModal()});
   document.querySelector('#addRoster')?.addEventListener('click',()=>{const n=document.querySelector('#rosterName')?.value.trim();const side=document.querySelector('#rosterFaction')?.value||'idp';if(!n)return;const added=addParticipants(n,side);if(added)document.querySelector('#rosterName').value='';else alert('Peserta tidak ditambahkan. Pastikan jumlah faction belum mencapai 20 dan nama tidak duplikat.')});
   document.querySelector('#bulkRoster')?.addEventListener('click',()=>{const ta=document.querySelector('#rosterBulkText');const side=document.querySelector('#rosterBulkFaction')?.value||'idp';if(!ta?.value.trim())return;const added=addParticipants(ta.value,side);ta.value='';alert(`${added} peserta ditambahkan ke ${side.toUpperCase()}.`)});
-  document.querySelector('#shufflePlayers')?.addEventListener('click',shufflePlayers);
-  document.querySelector('#participantList')?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-player]');if(!b)return;const [side,index]=b.dataset.removePlayer.split(':');if(confirm(`Hapus peserta ${side}?`))removeParticipant(side,index)});
+  document.querySelector('#shufflePlayers')?.addEventListener('click',shufflePlayers); document.querySelector('#removeAllPlayers')?.addEventListener('click',removeAllParticipants);
+  document.querySelector('#participantList')?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-player]');if(!b)return;const [side,index]=b.dataset.removePlayer.split(':');if(confirm(`Hapus player ${side}?\n\nPlayer akan dihapus dari roster dan team.`))removeParticipant(side,index)});
 }
 function setupAdminLogin(){
   const gate=document.querySelector('#adminLogin'); if(!gate)return true;
