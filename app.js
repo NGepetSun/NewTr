@@ -145,16 +145,24 @@ function drawPremiumBracketLines(board){
       const dot=document.createElementNS(svgNS,'circle');dot.setAttribute('cx',tx);dot.setAttribute('cy',ty);dot.setAttribute('r',i===rounds.length-2?'3':'2');dot.setAttribute('fill',stroke);svg.appendChild(dot);
     });
   }
-  // Champion is visually attached to the Grand Final, not placed below the bracket.
+  // Champion and runner-up are visually attached to the Grand Final, to its right.
   const finalRound=rounds[rounds.length-1];
   const finalSlot=finalRound?.querySelector('.match-slot:not(.third-match)');
   const champion=board.querySelector('.champion-reference');
+  const runnerUp=board.querySelector('.runner-up-reference');
   if(finalSlot&&champion){
     const fr=rel(card(finalSlot).getBoundingClientRect()), cr=rel(champion.getBoundingClientRect());
     const sy=fr.y+fr.h/2, ey=cr.y+cr.h/2, sx=fr.x+fr.w, ex=cr.x;
     const mx=sx+Math.max(18,(ex-sx)*0.55);
     path(`M ${sx} ${sy} H ${mx} V ${ey} H ${ex}`,'url(#bracketGold)',2.2,true);
     const dot=document.createElementNS(svgNS,'circle');dot.setAttribute('cx',ex);dot.setAttribute('cy',ey);dot.setAttribute('r','3.2');dot.setAttribute('fill','#f5d46a');dot.setAttribute('filter','url(#bracketGlow)');svg.appendChild(dot);
+  }
+  if(finalSlot&&runnerUp){
+    const fr=rel(card(finalSlot).getBoundingClientRect()), rr=rel(runnerUp.getBoundingClientRect());
+    const sy=fr.y+fr.h/2, ey=rr.y+rr.h/2, sx=fr.x+fr.w, ex=rr.x;
+    const mx=sx+Math.max(14,(ex-sx)*0.4);
+    path(`M ${sx} ${sy} H ${mx} V ${ey} H ${ex}`,'#777b86',1.5);
+    const dot=document.createElementNS(svgNS,'circle');dot.setAttribute('cx',ex);dot.setAttribute('cy',ey);dot.setAttribute('r','2.4');dot.setAttribute('fill','#9aa1ad');svg.appendChild(dot);
   }
   board.prepend(svg);
 }
@@ -165,7 +173,7 @@ function renderBracket(){
     ms.filter(m=>m[0]!=='third').forEach(m=>{const r=m[0].match(/^r(\d+)/)?.[1]||'1';(rounds[r]??=[]).push(m)});
     const labels=['ROUND OF 16','QUARTER FINAL','SEMI FINAL','GRAND FINAL'];
     const keys=Object.keys(rounds).sort((a,b)=>+a-+b);
-    board.innerHTML=keys.map((r,idx)=>`<div class="bracket-round round-${idx===0?'q':idx===keys.length-1?'g':'s'}" data-round="${r}"><div class="col-title">${labels[idx]||'ROUND '+r}</div>${rounds[r].map(m=>`<div class="match-slot" data-match="${m[0]}"></div>`).join('')}</div>`).join('')+`<div class="bracket-podium-reference"><div class="champion-reference"><span>CHAMPION</span><div>🏆</div><strong id="championName">TBD</strong><small>JUARA 1</small></div><div class="third-fourth-reference"><div class="placement-label">PEREBUTAN JUARA 3 & 4</div><div class="placement-mini-grid"><div><span>JUARA 3</span><b id="thirdName">TBD</b></div><div><span>JUARA 4</span><b id="fourthName">TBD</b></div></div></div></div>`;
+    board.innerHTML=keys.map((r,idx)=>`<div class="bracket-round round-${idx===0?'q':idx===keys.length-1?'g':'s'}" data-round="${r}"><div class="col-title">${labels[idx]||'ROUND '+r}</div>${rounds[r].map(m=>`<div class="match-slot" data-match="${m[0]}"></div>`).join('')}</div>`).join('')+`<div class="bracket-podium-reference"><div class="champion-reference"><span>CHAMPION</span><div>🏆</div><strong id="championName">TBD</strong><small>JUARA 1</small></div><div class="runner-up-reference"><span>RUNNER-UP</span><b id="runnerUpName">TBD</b><small>JUARA 2</small></div><div class="third-fourth-reference"><div class="placement-label">PEREBUTAN JUARA 3 & 4</div><div class="placement-mini-grid"><div><span>JUARA 3</span><b id="thirdName">TBD</b></div><div><span>JUARA 4</span><b id="fourthName">TBD</b></div></div></div></div>`;
   }
   document.querySelectorAll('[data-match]').forEach(el=>{const m=ms.find(x=>x[0]===el.dataset.match);if(m)el.innerHTML=refCard(m)});
   requestAnimationFrame(()=>drawPremiumBracketLines(board));
@@ -174,6 +182,7 @@ function renderBracket(){
   const c=winner(final[0],final[2],final[3]),runner=loser(final[0],final[2],final[3]);
   const p3=third?winner('third',third[2],third[3]):'TBD',p4=third?loser('third',third[2],third[3]):'TBD';
   const champ=document.querySelector('#championName');if(champ)champ.textContent=c;
+  const runnerUp=document.querySelector('#runnerUpName');if(runnerUp)runnerUp.textContent=runner;
   const thirdName=document.querySelector('#thirdName');if(thirdName)thirdName.textContent=p3;
   const fourthName=document.querySelector('#fourthName');if(fourthName)fourthName.textContent=p4;
   const standings=document.querySelector('#standings');if(standings)standings.innerHTML=[['JUARA 1',c,'7.000.000'],['JUARA 2',runner,'4.000.000'],['JUARA 3',p3,'2.500.000'],['JUARA 4',p4,'1.500.000']].map(x=>`<div><span>${x[0]}</span><b>${esc(x[1])}</b><small>${x[2]}</small></div>`).join('');
@@ -181,9 +190,17 @@ function renderBracket(){
 function renderRoster(){const el=document.querySelector('#rosterGrid');if(!el)return;const count=document.querySelector('.roster-count');if(count)count.textContent=`${TEAM_COUNT} TEAMS · MAX 5 PLAYERS / TEAM`;el.innerHTML=state.teams.map((t,i)=>`<article class="roster-card ${t.side}"><div class="roster-head"><div class="mini-crest ${t.side}">${String.fromCharCode(65+i%4)}</div><div><span>MAPENDOS · ${teamLabel(i)}</span><h3>${esc(t.name)}</h3></div></div><div class="players">${t.players.map((p,j)=>{const n=typeof p==='object'?p.name:p;const f=typeof p==='object'?p.side:'';return `<div><span class="num">0${j+1}</span><b>${esc(n||'TBD')}</b><em class="${f}">${f?f.toUpperCase():''}</em></div>`}).join('')}</div></article>`).join('')}
 function renderAdminTeams(){
   const el=document.querySelector('#adminTeams');if(!el)return;
+  let idpIdx=0,imeIdx=0;
   el.innerHTML=state.teams.map((t,i)=>{
     const players=t.players||[];
-    return `<article class="admin-team mixed"><div class="admin-team-top"><b>${teamLabel(i)}</b><span class="team-status">${players.filter(p=>p&&p.name).length}/5 PLAYERS</span></div><div class="admin-team-player-list">${players.map((p,j)=>`<div class="admin-player"><span>0${j+1}</span><b>${esc(p?.name||p||'TBD')}</b><em class="${p?.side||''}">${p?.side?p.side.toUpperCase():''}</em></div>`).join('')}</div></article>`;
+    return `<article class="admin-team mixed"><div class="admin-team-top"><b>${teamLabel(i)}</b><span class="team-status">${players.filter(p=>p&&p.name).length}/5 PLAYERS</span></div><div class="admin-team-player-list">${players.map((p,j)=>{
+      const name=(typeof p==='object'?p.name:p)||'';
+      const side=(typeof p==='object'?p.side:'')||'';
+      const removable=name&&name!=='TBD'&&(side==='idp'||side==='ime');
+      const idx=side==='idp'?idpIdx:side==='ime'?imeIdx:-1;
+      if(removable){if(side==='idp')idpIdx++;else imeIdx++}
+      return `<div class="admin-player"><span>0${j+1}</span><b>${esc(name||'TBD')}</b><em class="${side}">${side?side.toUpperCase():''}</em>${removable?`<button type="button" class="admin-player-remove" data-remove-player="${side}:${idx}" aria-label="Hapus ${esc(name)}">×</button>`:''}</div>`;
+    }).join('')}</div></article>`;
   }).join('');
   updateRosterPoolSummary();
 }
@@ -540,6 +557,7 @@ function setupRosterModal(){
   document.querySelector('#bulkRoster')?.addEventListener('click',()=>{const ta=document.querySelector('#rosterBulkText');const side=document.querySelector('#rosterBulkFaction')?.value||'idp';if(!ta?.value.trim())return;const added=addParticipants(ta.value,side);ta.value='';alert(`${added} peserta ditambahkan ke ${side.toUpperCase()}.`)});
   document.querySelector('#shufflePlayers')?.addEventListener('click',shufflePlayers); document.querySelector('#removeAllPlayers')?.addEventListener('click',removeAllParticipants);
   document.querySelector('#participantList')?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-player]');if(!b)return;const [side,index]=b.dataset.removePlayer.split(':');if(confirm(`Hapus player ${side}?\n\nPlayer akan dihapus dari roster dan team.`))removeParticipant(side,index)});
+  document.querySelector('#adminTeams')?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-player]');if(!b)return;const [side,index]=b.dataset.removePlayer.split(':');const name=b.getAttribute('aria-label')?.replace('Hapus ','')||'player ini';if(confirm(`Hapus ${name} dari roster dan team?\n\nTeam akan dikocok ulang otomatis.`))removeParticipant(side,index)});
 }
 function setupAdminLogin(){
   const gate=document.querySelector('#adminLogin'); if(!gate)return true;
