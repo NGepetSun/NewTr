@@ -188,21 +188,21 @@ function renderBracket(){
   const standings=document.querySelector('#standings');if(standings)standings.innerHTML=[['JUARA 1',c,'7.000.000'],['JUARA 2',runner,'4.000.000'],['JUARA 3',p3,'2.500.000'],['JUARA 4',p4,'1.500.000']].map(x=>`<div><span>${x[0]}</span><b>${esc(x[1])}</b><small>${x[2]}</small></div>`).join('');
 }
 function renderRoster(){const el=document.querySelector('#rosterGrid');if(!el)return;const count=document.querySelector('.roster-count');if(count)count.textContent=`${TEAM_COUNT} TEAMS · MAX 5 PLAYERS / TEAM`;el.innerHTML=state.teams.map((t,i)=>`<article class="roster-card ${t.side}"><div class="roster-head"><div class="mini-crest ${t.side}">${String.fromCharCode(65+i%4)}</div><div><span>MAPENDOS · ${teamLabel(i)}</span><h3>${esc(t.name)}</h3></div></div><div class="players">${t.players.map((p,j)=>{const n=typeof p==='object'?p.name:p;const f=typeof p==='object'?p.side:'';return `<div><span class="num">0${j+1}</span><b>${esc(n||'TBD')}</b><em class="${f}">${f?f.toUpperCase():''}</em></div>`}).join('')}</div></article>`).join('')}
-function renderAdminTeams(){
-  const el=document.querySelector('#adminTeams');if(!el)return;
-  let idpIdx=0,imeIdx=0;
-  // Flat list of every currently-assigned player with their location, used to build
-  // each team's "pindahkan player ke sini" dropdown (manual override of the shuffle).
-  const allPlaced=[];
+function getPlacedPlayers(){
+  const list=[];
   state.teams.forEach((t,ti)=>(t.players||[]).forEach((p,pi)=>{
     const name=(typeof p==='object'?p.name:p)||'';
     const side=(typeof p==='object'?p.side:'')||'';
-    if(name)allPlaced.push({name,side,ti,pi});
+    if(name)list.push({name,side,ti,pi});
   }));
+  return list;
+}
+function renderAdminTeams(){
+  const el=document.querySelector('#adminTeams');if(!el)return;
+  let idpIdx=0,imeIdx=0;
   el.innerHTML=state.teams.map((t,i)=>{
     const players=t.players||[];
-    const moveOptions=allPlaced.filter(p=>p.ti!==i).map(p=>`<option value="${p.ti}:${p.pi}">${esc(p.name)} · ${p.side?p.side.toUpperCase():''} (di ${teamLabel(p.ti)})</option>`).join('');
-    return `<article class="admin-team mixed"><div class="admin-team-top"><b>${teamLabel(i)}</b><span class="team-status">${players.filter(p=>p&&p.name).length}/5 PLAYERS</span></div><div class="admin-team-manual-move"><select class="admin-move-into" data-target-team="${i}"><option value="">+ Pindahkan player ke ${teamLabel(i)}...</option>${moveOptions}</select></div><div class="admin-team-player-list">${players.map((p,j)=>{
+    return `<article class="admin-team mixed"><div class="admin-team-top"><b>${teamLabel(i)}</b><span class="team-status">${players.filter(p=>p&&p.name).length}/5 PLAYERS</span></div><div class="admin-move-search" data-target-team="${i}"><input type="text" class="admin-move-input" autocomplete="off" placeholder="🔍 Cari player untuk pindah ke ${teamLabel(i)}..."><div class="admin-move-suggestions"></div></div><div class="admin-team-player-list">${players.map((p,j)=>{
       const name=(typeof p==='object'?p.name:p)||'';
       const side=(typeof p==='object'?p.side:'')||'';
       const removable=name&&name!=='TBD'&&(side==='idp'||side==='ime');
@@ -622,11 +622,27 @@ function setupRosterModal(){
   document.querySelector('#shufflePlayers')?.addEventListener('click',shufflePlayers); document.querySelector('#removeAllPlayers')?.addEventListener('click',removeAllParticipants);
   document.querySelector('#participantList')?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-player]');if(!b)return;const [side,index]=b.dataset.removePlayer.split(':');if(confirm(`Hapus player ${side}?\n\nPlayer akan dihapus dari roster dan team.`))removeParticipant(side,index)});
   document.querySelector('#adminTeams')?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-player]');if(!b)return;const [side,index]=b.dataset.removePlayer.split(':');const name=b.getAttribute('aria-label')?.replace('Hapus ','')||'player ini';if(confirm(`Hapus ${name} dari roster dan team?\n\nTeam akan dikocok ulang otomatis.`))removeParticipant(side,index)});
-  document.querySelector('#adminTeams')?.addEventListener('change',e=>{
-    const sel=e.target.closest('.admin-move-into');if(!sel||!sel.value)return;
-    const [fromTeam,fromIdx]=sel.value.split(':');
-    const toTeam=sel.dataset.targetTeam;
+  document.querySelector('#adminTeams')?.addEventListener('input',e=>{
+    const input=e.target.closest('.admin-move-input');if(!input)return;
+    const wrap=input.closest('.admin-move-search');
+    const box=wrap?.querySelector('.admin-move-suggestions');if(!box)return;
+    const toTeam=Number(wrap.dataset.targetTeam);
+    const query=input.value.trim().toLowerCase();
+    if(!query){box.innerHTML='';box.classList.remove('show');return;}
+    const matches=getPlacedPlayers().filter(p=>p.ti!==toTeam&&p.name.toLowerCase().includes(query)).slice(0,8);
+    box.innerHTML=matches.length?matches.map(p=>`<div class="admin-move-suggestion" data-move="${p.ti}:${p.pi}"><b>${esc(p.name)}</b><em class="${p.side}">${p.side?p.side.toUpperCase():''}</em><span>di ${teamLabel(p.ti)}</span></div>`).join(''):`<div class="admin-move-empty">Tidak ditemukan</div>`;
+    box.classList.add('show');
+  });
+  document.querySelector('#adminTeams')?.addEventListener('click',e=>{
+    const sug=e.target.closest('.admin-move-suggestion');if(!sug)return;
+    const wrap=sug.closest('.admin-move-search');if(!wrap)return;
+    const toTeam=wrap.dataset.targetTeam;
+    const [fromTeam,fromIdx]=sug.dataset.move.split(':');
     movePlayerBetweenTeams(fromTeam,fromIdx,toTeam);
+  });
+  document.addEventListener('click',e=>{
+    if(e.target.closest('.admin-move-search'))return;
+    document.querySelectorAll('.admin-move-suggestions.show').forEach(b=>b.classList.remove('show'));
   });
 }
 function setupAdminLogin(){

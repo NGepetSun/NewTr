@@ -467,10 +467,19 @@ footer i{color:var(--gold-2);margin:0 10px}
 .admin-player-remove{flex:0 0 auto;width:22px;height:22px;line-height:1;border:1px solid var(--line-strong);
   background:var(--surface-3);color:#c98a95;cursor:pointer;font-size:13px;padding:0}
 .admin-player-remove:hover{border-color:var(--idp);color:var(--idp);background:var(--idp-dim)}
-.admin-team-manual-move{margin-bottom:10px}
-.admin-move-into{width:100%;background:var(--surface-2);border:1px dashed var(--line-strong);color:var(--gold);padding:7px 8px;font:600 9px 'Chakra Petch',sans-serif;letter-spacing:.3px;outline:0;cursor:pointer}
-.admin-move-into:hover{border-color:var(--gold)}
-.admin-move-into option{color:#e2e3ea;background:var(--surface-2)}
+.admin-team{position:relative}
+.admin-move-search{position:relative;margin-bottom:10px}
+.admin-move-input{width:100%;background:var(--surface-2);border:1px dashed var(--line-strong);color:#fff;padding:7px 8px;font:600 9px 'Chakra Petch',sans-serif;letter-spacing:.3px;outline:0}
+.admin-move-input:focus{border-color:var(--gold);border-style:solid}
+.admin-move-input::placeholder{color:var(--muted)}
+.admin-move-suggestions{display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);z-index:20;background:var(--surface-3);border:1px solid var(--line-strong);max-height:180px;overflow-y:auto}
+.admin-move-suggestions.show{display:block}
+.admin-move-suggestion{display:flex;align-items:center;gap:6px;padding:7px 8px;cursor:pointer;border-bottom:1px solid var(--line)}
+.admin-move-suggestion:last-child{border-bottom:0}
+.admin-move-suggestion:hover{background:var(--gold-dim,rgba(255,196,0,.12))}
+.admin-move-suggestion b{font:600 11px Inter,sans-serif;color:#e2e3ea;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-move-suggestion span{font:600 8px 'Chakra Petch',sans-serif;color:var(--muted)}
+.admin-move-empty{padding:8px;font:600 9px 'Chakra Petch',sans-serif;color:var(--muted);text-align:center}
 
 .result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .admin-card{border:1px solid var(--line);padding:16px;background:var(--surface)}
