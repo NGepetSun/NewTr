@@ -233,17 +233,22 @@ function distributeToTeams(idpPool,imePool){
   const ratio=total?idpPool.length/total:0;
   const sizes=Array.from({length:teamCount},(_,i)=>Math.min(5,total-i*5));
 
-  // Target faction counts per team are calculated from the global roster ratio.
-  const targets=sizes.map(size=>Math.round(size*ratio));
-  const idpTarget=targets.reduce((a,b)=>a+b,0);
-  let diff=idpPool.length-idpTarget;
-  if(diff!==0){
-    const order=targets.map((v,i)=>i).sort((a,b)=>diff>0?(sizes[b]-targets[b])-(sizes[a]-targets[a]):targets[b]-targets[a]);
-    for(const i of order){
-      if(diff>0&&targets[i]<sizes[i]){targets[i]++;diff--}
-      else if(diff<0&&targets[i]>0){targets[i]--;diff++}
-      if(diff===0)break;
-    }
+  // Target IDP count per team from the global roster ratio, using largest-remainder
+  // rounding so every team's target is as close as possible to the true ratio
+  // (this is what previously let a team drift to e.g. 4 IDP / 1 IME).
+  const raw=sizes.map(size=>size*ratio);
+  const targets=raw.map(Math.floor);
+  let remainder=idpPool.length-targets.reduce((a,b)=>a+b,0);
+  const byFraction=raw.map((v,i)=>({i,frac:v-Math.floor(v)})).sort((a,b)=>b.frac-a.frac);
+  for(let k=0;k<byFraction.length&&remainder>0;k++){
+    const i=byFraction[k].i;
+    if(targets[i]<sizes[i]){targets[i]++;remainder--}
+  }
+  // Edge case safety net: if rounding still left leftovers, hand them to whichever
+  // teams have spare capacity so the totals always add up exactly.
+  if(remainder>0){
+    const byCapacity=targets.map((t,i)=>i).sort((a,b)=>(sizes[b]-targets[b])-(sizes[a]-targets[a]));
+    for(const i of byCapacity){while(remainder>0&&targets[i]<sizes[i]){targets[i]++;remainder--}}
   }
 
   // A banned list means a clique: every banned player must be in a different team.
@@ -252,45 +257,59 @@ function distributeToTeams(idpPool,imePool){
   const impossible=bannedPlayers.length>teamCount;
 
   let best=null;
-  for(let attempt=0;attempt<2500;attempt++){
-    const players=[
-      ...shuffleArray(idpPool.map(name=>({name,side:'idp',banned:state.banned.includes(name)}))),
-      ...shuffleArray(imePool.map(name=>({name,side:'ime',banned:state.banned.includes(name)})))
-    ];
-    // Place constrained/banned players first, then fill the remaining slots.
-    shuffleArray(players);
-    players.sort((a,b)=>(b.banned-a.banned));
+  for(let attempt=0;attempt<200;attempt++){
+    const idp=shuffleArray(idpPool.map(name=>({name,side:'idp'})));
+    const ime=shuffleArray(imePool.map(name=>({name,side:'ime'})));
 
+    // Fill each team to exactly its IDP/IME target first, so faction balance is
+    // guaranteed by construction instead of hoping a random search finds it.
     const teams=Array.from({length:teamCount},()=>[]);
-    let failed=false;
-    for(const player of players){
-      const candidates=[];
-      for(let i=0;i<teamCount;i++){
-        const team=teams[i];
-        if(team.length>=sizes[i])continue;
-        if(teamHasBanned(team,player.name))continue;
-        const factionCount=team.filter(p=>p.side===player.side).length;
-        const target=targets[i];
-        // Prefer teams that are furthest below their faction target.
-        const factionPenalty=Math.max(0,factionCount-target);
-        const fillPenalty=team.length/sizes[i];
-        candidates.push({i,score:factionPenalty*100+fillPenalty*10+Math.random()});
-      }
-      if(!candidates.length){failed=true;break}
-      candidates.sort((a,b)=>a.score-b.score);
-      teams[candidates[0].i].push(player);
+    let idpI=0,imeI=0;
+    for(let i=0;i<teamCount;i++){
+      const idpNeeded=targets[i],imeNeeded=sizes[i]-targets[i];
+      teams[i].push(...idp.slice(idpI,idpI+idpNeeded));idpI+=idpNeeded;
+      teams[i].push(...ime.slice(imeI,imeI+imeNeeded));imeI+=imeNeeded;
     }
-    if(failed)continue;
+
+    // Now resolve banned-player clashes by swapping same-faction players between
+    // teams only, which fixes conflicts without ever disturbing the IDP/IME balance.
+    resolveBannedClashes(teams);
 
     const conflict=teams.some(team=>team.some((p,j)=>team.some((q,k)=>j<k&&isBanned(p.name,q.name))));
-    const factionError=teams.reduce((sum,team,i)=>sum+Math.abs(team.filter(p=>p.side==='idp').length-targets[i]),0);
-    const candidate={teams,conflict,factionError};
-    if(!best||candidate.factionError<best.factionError)best=candidate;
-    if(!conflict&&factionError===0)return {teams,conflict:false,impossible:false};
+    if(!best||(best.conflict&&!conflict))best={teams,conflict};
+    if(!conflict)return {teams,conflict:false,impossible:false};
   }
 
   if(best)return {teams:best.teams,conflict:best.conflict,impossible};
   return {teams:[],conflict:true,impossible};
+}
+function resolveBannedClashes(teams){
+  // Tries swapping two same-faction players across teams to remove a banned clash.
+  // Same-faction swaps never change either team's IDP/IME count.
+  for(let pass=0;pass<20;pass++){
+    let changed=false;
+    for(let i=0;i<teams.length;i++){
+      const team=teams[i];
+      for(let j=0;j<team.length;j++){
+        const player=team[j];
+        if(!teamHasBanned(team,player.name))continue;
+        let swapped=false;
+        for(let ti=0;ti<teams.length&&!swapped;ti++){
+          if(ti===i)continue;
+          const other=teams[ti];
+          for(let tj=0;tj<other.length;tj++){
+            const candidate=other[tj];
+            if(candidate.side!==player.side)continue;
+            team[j]=candidate;other[tj]=player;
+            const stillClashing=teamHasBanned(team,candidate.name)||teamHasBanned(other,player.name);
+            if(!stillClashing){changed=true;swapped=true;break}
+            team[j]=player;other[tj]=candidate;
+          }
+        }
+      }
+    }
+    if(!changed)break;
+  }
 }
 function applyDistribution(idpPool,imePool){
   const res=distributeToTeams(idpPool,imePool);
