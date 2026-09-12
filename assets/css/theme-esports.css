@@ -1,0 +1,108 @@
+/* ============================================================
+   MAPENDOS — ARENA ENHANCEMENT LAYER
+   Loads AFTER styles.css. Purely additive: no existing class is
+   redefined structurally, only enriched (glow, motion, texture).
+   Nothing here changes markup contracts app.js depends on.
+   ============================================================ */
+:root{
+  --hud-idp:var(--idp,#ff3358);
+  --hud-ime:var(--ime,#9a49ff);
+  --hud-gold:var(--gold,#ffc233);
+}
+
+/* ---------- respect reduced motion, globally ---------- */
+@media (prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+
+/* ---------- arena backdrop: hex plating + slow HUD sweep ---------- */
+body:before{
+  content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.16;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='72'%3E%3Cpath d='M42 0 84 24 84 72 42 96 0 72 0 24Z' fill='none' stroke='rgba(255,255,255,0.35)' stroke-width='1'/%3E%3C/svg%3E");
+  background-size:84px 72px;mix-blend-mode:screen}
+body:after{
+  content:"";position:fixed;inset:-10% -30%;z-index:1;pointer-events:none;
+  background:linear-gradient(100deg,transparent 44%,rgba(255,255,255,.05) 49%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.05) 51%,transparent 56%);
+  animation:hudSweep 10s linear infinite;mix-blend-mode:screen}
+@keyframes hudSweep{0%{transform:translateX(-25%)}100%{transform:translateX(25%)}}
+#arenaFx{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.6}
+.topbar,main,footer,.admin-page,.admin-login{position:relative;z-index:2}
+
+/* ---------- custom scrollbar ---------- */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--ink,#050609)}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--hud-idp),var(--hud-ime))}
+::-webkit-scrollbar-thumb:hover{filter:brightness(1.25)}
+
+/* ---------- accessible keyboard focus (quality floor) ---------- */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--hud-gold);outline-offset:2px;border-radius:2px}
+
+/* ---------- brand emblem, drawn in CSS — no image asset needed ---------- */
+.logo-word strong:before{
+  content:"";display:inline-block;width:18px;height:18px;margin-right:8px;vertical-align:-3px;
+  background:conic-gradient(from 220deg,var(--hud-idp),var(--hud-gold) 50%,var(--hud-ime));
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  filter:drop-shadow(0 0 6px rgba(255,194,51,.5))}
+.admin-login-mark,.kills-brand-mark{position:relative;z-index:1}
+.admin-login-mark:before,.kills-brand-mark:before{
+  content:"";position:absolute;inset:-4px;z-index:-1;opacity:.55;filter:blur(5px);
+  background:conic-gradient(from 220deg,var(--hud-idp),var(--hud-gold) 50%,var(--hud-ime));
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)}
+
+/* ---------- hero: one orchestrated reveal on load ---------- */
+.home-inner h1{animation:heroReveal 1.1s cubic-bezier(.2,.9,.25,1) both}
+.home-kicker,.home-tag,.family-row,.date-banner,.home-slogan{animation:heroFadeUp .8s cubic-bezier(.2,.9,.25,1) both}
+.home-kicker{animation-delay:.05s}.home-inner h1{animation-delay:.1s}.home-tag{animation-delay:.35s}
+.family-row{animation-delay:.45s}.date-banner{animation-delay:.6s}.home-slogan{animation-delay:.72s}
+@keyframes heroReveal{from{opacity:0;letter-spacing:16px;filter:blur(7px)}to{opacity:1;letter-spacing:2px;filter:blur(0)}}
+@keyframes heroFadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* ---------- VS energy core ---------- */
+.versus{position:relative}
+.versus:before{
+  content:"";position:absolute;left:50%;top:50%;width:130px;height:130px;transform:translate(-50%,-50%);
+  background:radial-gradient(circle,rgba(255,194,51,.32),transparent 70%);z-index:-1;
+  animation:vsPulse 2.6s ease-in-out infinite}
+@keyframes vsPulse{0%,100%{opacity:.5;transform:translate(-50%,-50%) scale(.85)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}}
+
+/* ---------- player-cam HUD corners on family portraits ---------- */
+.family-card{position:relative}
+.family-card:before,.family-card:after{content:"";position:absolute;top:-5px;width:16px;height:16px;
+  border:2px solid var(--hud-gold);opacity:.8;pointer-events:none}
+.family-card:before{left:-5px;border-right:0;border-bottom:0}
+.family-card:after{right:-5px;border-left:0;border-bottom:0}
+.family-card.idp:before,.family-card.idp:after{border-color:var(--hud-idp)}
+.family-card.ime:before,.family-card.ime:after{border-color:var(--hud-ime)}
+
+/* ---------- live-day banner state (toggled by theme-esports.js on event day) ---------- */
+.date-banner.is-live{border-color:rgba(255,51,88,.55)}
+.date-banner.is-live strong{color:#ff5e79;animation:livePulse 1.5s ease-in-out infinite}
+@keyframes livePulse{0%,100%{text-shadow:0 0 0 transparent}50%{text-shadow:0 0 18px rgba(255,51,88,.65)}}
+
+/* ---------- card sheen sweep on hover ---------- */
+.roster-card,.stream-card,.match-card-ref{position:relative;overflow:hidden}
+.roster-card:after,.stream-card:after,.match-card-ref:after{
+  content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.09),transparent);
+  transform:skewX(-18deg);transition:left .6s ease;pointer-events:none}
+.roster-card:hover,.stream-card:hover,.match-card-ref:hover{box-shadow:0 16px 30px rgba(0,0,0,.4)}
+.roster-card:hover:after,.stream-card:hover:after,.match-card-ref:hover:after{left:130%}
+.family-card,.roster-card,.stream-card,.match-card-ref,.kill-card{transition:transform .25s cubic-bezier(.2,.9,.25,1),box-shadow .25s}
+
+/* ---------- rank-1 holographic shimmer — the one bold moment ---------- */
+.kill-card.rank-1{position:relative;overflow:hidden}
+.kill-card.rank-1:before{
+  content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:linear-gradient(115deg,transparent 30%,rgba(255,194,51,.16) 48%,rgba(255,255,255,.22) 50%,rgba(255,194,51,.16) 52%,transparent 70%);
+  background-size:250% 250%;animation:holoSweep 3.8s linear infinite}
+@keyframes holoSweep{0%{background-position:200% 0}100%{background-position:-50% 0}}
+
+/* ---------- nav underline energy sweep on hover ---------- */
+.topbar nav a{position:relative}
+.topbar nav a:not(.active):after{content:"";position:absolute;left:12px;right:12px;bottom:0;height:2px;
+  background:linear-gradient(90deg,var(--hud-idp),var(--hud-gold),var(--hud-ime));transform:scaleX(0);transition:transform .25s}
+.topbar nav a:not(.active):hover:after{transform:scaleX(1)}
+
+/* ---------- primary action glow ---------- */
+.gold-action:hover,.play:hover{box-shadow:0 0 0 1px rgba(255,194,51,.5),0 10px 26px rgba(255,194,51,.18)}
