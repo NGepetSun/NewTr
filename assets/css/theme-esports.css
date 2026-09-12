@@ -26,7 +26,8 @@ body:after{
   animation:hudSweep 10s linear infinite;mix-blend-mode:screen}
 @keyframes hudSweep{0%{transform:translateX(-25%)}100%{transform:translateX(25%)}}
 #arenaFx{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.6}
-.topbar,main,footer,.admin-page,.admin-login{position:relative;z-index:2}
+.topbar,main,footer,.admin-page{position:relative;z-index:2}
+.admin-login{position:fixed!important;inset:0!important;z-index:99999!important}
 
 /* ---------- custom scrollbar ---------- */
 ::-webkit-scrollbar{width:10px;height:10px}
