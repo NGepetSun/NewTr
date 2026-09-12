@@ -1,6 +1,7 @@
 const TEAM_COUNT=16;
+const MAX_TEAMS=16;
 const DEFAULT={teams:Array.from({length:TEAM_COUNT},(_,i)=>({name:`MPD ${String.fromCharCode(65+i)}`,side:'mixed',players:[]})),bracketOrder:Array.from({length:TEAM_COUNT},(_,i)=>i),scores:{},winners:{},live:{idp:'',ime:''},banned:[],killsRanking:{matchLabel:'ALL MATCHES',weekLabel:'WEEK 1',seasonLabel:'REGULAR SEASON',matches:[]}};
-const KEY='mapendos-v9-pages';
+const KEY='mapendos-v10-reference-roster';
 const API_STATE='/api/state';
 let remoteReady=false;
 let remoteUpdatedAt=null;
@@ -10,7 +11,7 @@ const teamLabel=i=>`MPD ${String.fromCharCode(65+i)}`;
 function normalize(raw){
   const d=clone(DEFAULT),x=raw&&typeof raw==='object'?raw:d;
   const source=Array.isArray(x.teams)?x.teams:[];
-  const teamCount=TEAM_COUNT;
+  const teamCount=MAX_TEAMS;
   let teams=Array.from({length:teamCount},(_,i)=>({
     name:`MPD ${String.fromCharCode(65+i)}`,
     side:'mixed',
@@ -29,6 +30,28 @@ function normalize(raw){
 }
 let state;try{state=normalize(JSON.parse(localStorage.getItem(KEY)||'null'))}catch{state=clone(DEFAULT)}
 if(!state||!Array.isArray(state.teams))state=clone(DEFAULT);
+const REFERENCE_LEFT=[['lele','marcel','rigel'],['gin','jiro','kenan'],['joler','laura','wansu'],['eki','ical','xyn'],['jalu','loak','ales'],['dilan','limz','weldan'],['natan','kairi','kla'],['gaga','aran','jucki'],['depan','showie','jexy'],['caesar','beryl','zar'],['sam','jefrey','goreng']];
+const REFERENCE_RIGHT=[['crusher','jepri'],['tatan','mattew'],['moza','kyuzin'],['clay','rey'],['iban','rexpi'],['iponge','jhon'],['cello','dokong'],['torik','memet'],['bons','wisnu'],['febri','eko'],['petrus','robby']];
+function buildReferenceRoster(){
+  return REFERENCE_LEFT.map((a,i)=>({name:`MPD ${i+1}`,side:'mixed',players:[...a.map(name=>({name,side:'idp'})),...REFERENCE_RIGHT[i].map(name=>({name,side:'ime'}))]}));
+}
+function hasAnyPlayers(teams){return Array.isArray(teams)&&teams.some(t=>Array.isArray(t?.players)&&t.players.some(p=>String((typeof p==='object'?p?.name:p)||'').trim()&&p!=='TBD'));}
+function seedReferenceRosterIfEmpty(){
+  if(localStorage.getItem(KEY))return;
+  const seeded=buildReferenceRoster();
+  state.teams=seeded.concat(Array.from({length:5},(_,i)=>({name:`MPD ${String.fromCharCode(76+i)}`,side:'mixed',players:[]})));
+  state.bracketOrder=Array.from({length:11},(_,i)=>i);
+}
+function seedReferenceRosterIfRemoteEmpty(data){
+  if(!data||!Array.isArray(data.teams)||hasAnyPlayers(data.teams))return false;
+  const seeded=buildReferenceRoster();
+  state.teams=seeded.concat(Array.from({length:5},(_,i)=>({name:`MPD ${String.fromCharCode(76+i)}`,side:'mixed',players:[]})));
+  state.bracketOrder=Array.from({length:11},(_,i)=>i);
+  localStorage.setItem(KEY,JSON.stringify(state));
+  renderAll(); renderParticipantList();
+  return true;
+}
+seedReferenceRosterIfEmpty();
 const getAdminPassword=()=>sessionStorage.getItem('mapendos-admin-password')||'';
 const save=async()=>{
   localStorage.setItem(KEY,JSON.stringify(state));
@@ -44,7 +67,14 @@ async function loadRemoteState(){
     const r=await fetch(API_STATE,{cache:'no-store'});
     if(!r.ok) throw new Error('API '+r.status);
     const data=await r.json();
-    if(data&&Array.isArray(data.teams)){ state=normalize(data); localStorage.setItem(KEY,JSON.stringify(state)); remoteUpdatedAt=data.updatedAt||null; remoteReady=true; renderAll(); renderParticipantList(); }
+    if(data&&Array.isArray(data.teams)){
+      state=normalize(data);
+      const seeded=seedReferenceRosterIfRemoteEmpty(data);
+      if(!seeded) localStorage.setItem(KEY,JSON.stringify(state));
+      remoteUpdatedAt=data.updatedAt||null; remoteReady=true;
+      if(seeded){ localStorage.setItem(KEY,JSON.stringify(state)); }
+      renderAll(); renderParticipantList();
+    }
   }catch(e){ console.warn('Using local state because remote database is unavailable.',e); }
 }
 async function syncRemoteState(){
@@ -63,34 +93,69 @@ const winner=(k,a,b)=>{
   return 'TBD';
 };
 const loser=(k,a,b)=>{const w=state.winners[k];return !w?'TBD':w===a?b:a};
+function activeTeamIndices(){
+  const teams=Array.isArray(state?.teams)?state.teams:[];
+  const withPlayers=teams.map((t,i)=>({i,t})).filter(x=>Array.isArray(x.t?.players)&&x.t.players.some(p=>{
+    const n=typeof p==='object'?p?.name:p; return String(n||'').trim() && n!=='TBD';
+  })).map(x=>x.i);
+  if(withPlayers.length)return withPlayers.slice(0,MAX_TEAMS);
+  return teams.map((_,i)=>i).slice(0,8);
+}
+function activeTeams(){return activeTeamIndices().map(i=>state.teams[i]).filter(Boolean)}
+function teamNameByIndex(i){return state.teams?.[i]?.name||'TBD'}
+function setMatch(id,a,b,label){return [id,label,a,b]}
 function matches(){
-  const order=Array.isArray(state.bracketOrder)?state.bracketOrder:state.teams.map((_,i)=>i);
-  const t=order.map(i=>state.teams[i]?.name||'TBD');
-  const n=t.length, size=2**Math.ceil(Math.log2(Math.max(2,n)));
-  const slots=[...t,...Array(size-n).fill('TBD')];
-  const rounds=[];
-  let prev=slots;
-  let roundNo=1;
-  while(prev.length>1){
-    const cur=[];
-    for(let i=0;i<prev.length;i+=2){
-      const id=`r${roundNo}m${i/2+1}`;
-      cur.push([id,`ROUND ${roundNo}`,prev[i],prev[i+1]]);
-    }
-    rounds.push(cur);
-    prev=cur.map(m=>winner(m[0],m[2],m[3]));
-    roundNo++;
+  const indices=activeTeamIndices();
+  const count=indices.length;
+  const ordered=(Array.isArray(state.bracketOrder)&&state.bracketOrder.length)
+    ? state.bracketOrder.filter(i=>indices.includes(Number(i))).map(Number)
+    : indices.slice();
+  indices.forEach(i=>{if(!ordered.includes(i))ordered.push(i)});
+  const t=ordered.map(teamNameByIndex);
+  if(count>=9){
+    // 9–16 team format: 16-slot double elimination, with the 11-team layout
+    // matching the requested reference bracket. For 11 teams, six teams play
+    // Round 1 while five seeded teams receive a Round 2 bye.
+    const seeds=[...t];
+    while(seeds.length<16)seeds.push('TBD');
+    const wb=[];
+    wb.push(setMatch('m1',seeds[7],seeds[8],'ROUND 1'));
+    wb.push(setMatch('m2',seeds[6],seeds[9],'ROUND 1'));
+    wb.push(setMatch('m3',seeds[5],seeds[10],'ROUND 1'));
+    wb.push(setMatch('m4',seeds[1],winner('m1',seeds[7],seeds[8]),'ROUND 2'));
+    wb.push(setMatch('m5',seeds[2],seeds[6],'ROUND 2'));
+    wb.push(setMatch('m6',seeds[4],winner('m2',seeds[6],seeds[9]),'ROUND 2'));
+    wb.push(setMatch('m7',seeds[3],winner('m3',seeds[5],seeds[10]),'ROUND 2'));
+    wb.push(setMatch('m13',winner('m4',seeds[1],winner('m1',seeds[7],seeds[8])),winner('m5',seeds[2],seeds[6]),'ROUND 3'));
+    wb.push(setMatch('m14',winner('m6',seeds[4],winner('m2',seeds[6],seeds[9])),winner('m7',seeds[3],winner('m3',seeds[5],seeds[10])),'ROUND 3'));
+    wb.push(setMatch('m18',winner('m13',wb[7][2],wb[7][3]),winner('m14',wb[8][2],wb[8][3]),'SEMIFINALS'));
+    const loserOf=(id,a,b)=>loser(id,a,b);
+    const l1a=setMatch('m10',loserOf('m7',wb[6][2],wb[6][3]),loserOf('m1',wb[0][2],wb[0][3]),'LOSERS ROUND 1');
+    const l1b=setMatch('m8',loserOf('m4',wb[3][2],wb[3][3]),loserOf('m2',wb[1][2],wb[1][3]),'LOSERS ROUND 1');
+    const l1c=setMatch('m9',loserOf('m5',wb[4][2],wb[4][3]),loserOf('m3',wb[2][2],wb[2][3]),'LOSERS ROUND 1');
+    const l2a=setMatch('m12',winner('m10',l1a[2],l1a[3]),loserOf('m6',wb[5][2],wb[5][3]),'LOSERS ROUND 2');
+    const l2b=setMatch('m11',winner('m8',l1b[2],l1b[3]),winner('m9',l1c[2],l1c[3]),'LOSERS ROUND 2');
+    const l3a=setMatch('m15',loserOf('m13',wb[7][2],wb[7][3]),winner('m12',l2a[2],l2a[3]),'LOSERS ROUND 3');
+    const l3b=setMatch('m16',loserOf('m14',wb[8][2],wb[8][3]),winner('m11',l2b[2],l2b[3]),'LOSERS ROUND 3');
+    const l4=setMatch('m17',winner('m15',l3a[2],l3a[3]),winner('m16',l3b[2],l3b[3]),'LOSERS ROUND 4');
+    const l5=setMatch('m19',winner('m17',l4[2],l4[3]),loserOf('m18',wb[9][2],wb[9][3]),'LOSERS ROUND 5');
+    const gf=setMatch('m20',winner('m18',wb[9][2],wb[9][3]),winner('m19',l5[2],l5[3]),'FINALS');
+    const reset=setMatch('m21',loser('m20',gf[2],gf[3]),winner('m20',gf[2],gf[3]),'RESET FINAL');
+    return [...wb.slice(0,7),...wb.slice(7),l1a,l1b,l1c,l2a,l2b,l3a,l3b,l4,l5,gf,reset];
   }
-  const all=rounds.flat();
-  const final=rounds[rounds.length-1]?.[0];
-  // Preserve the existing prize layout: 3rd-place match between semifinal losers when possible.
-  if(rounds.length>=2){
-    const semis=rounds[rounds.length-2];
-    if(semis.length===2){
-      all.push(['third','3RD PLACE',loser(semis[0][0],semis[0][2],semis[0][3]),loser(semis[1][0],semis[1][2],semis[1][3])]);
-    }
+  // 8-team mode remains the clean single-elimination bracket requested earlier.
+  const size=8,slots=[...t,...Array(Math.max(0,size-t.length)).fill('TBD')],rounds=[];let prev=slots,roundNo=1;
+  while(prev.length>1){const cur=[];for(let i=0;i<prev.length;i+=2){const id=`r${roundNo}m${i/2+1}`;cur.push(setMatch(id,prev[i],prev[i+1],`ROUND ${roundNo}`))}rounds.push(cur);prev=cur.map(m=>winner(m[0],m[2],m[3]));roundNo++}
+  const all=rounds.flat();if(rounds.length>=2){const semis=rounds[rounds.length-2];all.push(['third','3RD PLACE',loser(semis[0][0],semis[0][2],semis[0][3]),loser(semis[1][0],semis[1][2],semis[1][3])])}return all;
+}
+function matchGroups(){
+  const ms=matches();
+  if(activeTeamIndices().length>=9){
+    const groups={wb1:[],wb2:[],wb3:[],wbsf:[],gf:[],lb1:[],lb2:[],lb3:[],lb4:[],lb5:[]};
+    const map={m1:'wb1',m2:'wb1',m3:'wb1',m4:'wb2',m5:'wb2',m6:'wb2',m7:'wb2',m13:'wb3',m14:'wb3',m18:'wbsf',m20:'gf',m21:'gf',m10:'lb1',m8:'lb1',m9:'lb1',m12:'lb2',m11:'lb2',m15:'lb3',m16:'lb3',m17:'lb4',m19:'lb5'};
+    ms.forEach(m=>{if(map[m[0]])groups[map[m[0]]].push(m)}); return groups;
   }
-  return all;
+  const rounds={};ms.filter(m=>m[0]!=='third').forEach(m=>{const r=m[0].match(/^r(\d+)/)?.[1]||'1';(rounds[r]??=[]).push(m)});return rounds;
 }
 function refCard(m,interactive=false){
   const[k,label,a,b]=m,s=state.scores[k]||[];
@@ -167,27 +232,39 @@ function drawPremiumBracketLines(board){
   board.prepend(svg);
 }
 function renderBracket(){
-  const ms=matches(),board=document.querySelector('.bracket-reference-board');
-  if(board){
-    const rounds={};
-    ms.filter(m=>m[0]!=='third').forEach(m=>{const r=m[0].match(/^r(\d+)/)?.[1]||'1';(rounds[r]??=[]).push(m)});
-    const labels=['ROUND OF 16','QUARTER FINAL','SEMI FINAL','GRAND FINAL'];
-    const keys=Object.keys(rounds).sort((a,b)=>+a-+b);
-    board.innerHTML=keys.map((r,idx)=>`<div class="bracket-round round-${idx===0?'q':idx===keys.length-1?'g':'s'}" data-round="${r}"><div class="col-title">${labels[idx]||'ROUND '+r}</div>${rounds[r].map(m=>`<div class="match-slot" data-match="${m[0]}"></div>`).join('')}</div>`).join('')+`<div class="bracket-podium-reference"><div class="champion-reference"><span>CHAMPION</span><div>🏆</div><strong id="championName">TBD</strong><small>JUARA 1</small></div><div class="runner-up-reference"><span>RUNNER-UP</span><b id="runnerUpName">TBD</b><small>JUARA 2</small></div><div class="third-fourth-reference"><div class="placement-label">PEREBUTAN JUARA 3 & 4</div><div class="placement-mini-grid"><div><span>JUARA 3</span><b id="thirdName">TBD</b></div><div><span>JUARA 4</span><b id="fourthName">TBD</b></div></div></div></div>`;
+  const board=document.querySelector('.bracket-reference-board');if(!board)return;
+  const count=activeTeamIndices().length;
+  if(count>=9){
+    const g=matchGroups();
+    const col=(title,key,cls)=>`<div class="bracket-column ${cls}"><div class="col-title">${title}</div>${g[key].map(m=>`<div class="match-slot" data-match="${m[0]}">${refCard(m)}</div>`).join('')}</div>`;
+    board.classList.add('double-elim-board');
+    board.innerHTML=`<div class="de-winners">${col('ROUND 1','wb1','de-r1')}${col('ROUND 2','wb2','de-r2')}${col('ROUND 3','wb3','de-r3')}${col('SEMIFINALS','wbsf','de-sf')}${col('FINALS','gf','de-gf')}</div><div class="de-losers">${col('LOSERS ROUND 1','lb1','de-lb1')}${col('LOSERS ROUND 2','lb2','de-lb2')}${col('LOSERS ROUND 3','lb3','de-lb3')}${col('LOSERS ROUND 4','lb4','de-lb4')}${col('LOSERS ROUND 5','lb5','de-lb5')}</div><div class="bracket-lines-ref" aria-hidden="true"></div>`;
+    requestAnimationFrame(()=>drawDoubleElimLines(board));
+    return;
   }
-  document.querySelectorAll('[data-match]').forEach(el=>{const m=ms.find(x=>x[0]===el.dataset.match);if(m)el.innerHTML=refCard(m)});
-  requestAnimationFrame(()=>drawPremiumBracketLines(board));
-  const final=ms.filter(m=>m[0]!=='third').at(-1),third=ms.find(m=>m[0]==='third');
-  if(!final)return;
-  const c=winner(final[0],final[2],final[3]),runner=loser(final[0],final[2],final[3]);
-  const p3=third?winner('third',third[2],third[3]):'TBD',p4=third?loser('third',third[2],third[3]):'TBD';
-  const champ=document.querySelector('#championName');if(champ)champ.textContent=c;
-  const runnerUp=document.querySelector('#runnerUpName');if(runnerUp)runnerUp.textContent=runner;
-  const thirdName=document.querySelector('#thirdName');if(thirdName)thirdName.textContent=p3;
-  const fourthName=document.querySelector('#fourthName');if(fourthName)fourthName.textContent=p4;
-  const standings=document.querySelector('#standings');if(standings)standings.innerHTML=[['JUARA 1',c,'7.000.000'],['JUARA 2',runner,'4.000.000'],['JUARA 3',p3,'2.500.000'],['JUARA 4',p4,'1.500.000']].map(x=>`<div><span>${x[0]}</span><b>${esc(x[1])}</b><small>${x[2]}</small></div>`).join('');
+  board.classList.remove('double-elim-board');
+  const ms=matches(),rounds={};ms.filter(m=>m[0]!=='third').forEach(m=>{const r=m[0].match(/^r(\d+)/)?.[1]||'1';(rounds[r]??=[]).push(m)});
+  const labels=['QUARTER FINAL','SEMI FINAL','GRAND FINAL'],keys=Object.keys(rounds).sort((a,b)=>+a-+b);
+  board.innerHTML=keys.map((r,idx)=>`<div class="bracket-round round-${idx===0?'q':idx===keys.length-1?'g':'s'}" data-round="${r}"><div class="col-title">${labels[idx]||'ROUND '+r}</div>${rounds[r].map(m=>`<div class="match-slot" data-match="${m[0]}"></div>`).join('')}</div>`).join('')+`<div class="bracket-podium-reference"><div class="champion-reference"><span>CHAMPION</span><div>🏆</div><strong id="championName">TBD</strong><small>JUARA 1</small></div><div class="runner-up-reference"><span>RUNNER-UP</span><b id="runnerUpName">TBD</b><small>JUARA 2</small></div></div>`;
+  document.querySelectorAll('[data-match]').forEach(el=>{const m=ms.find(x=>x[0]===el.dataset.match);if(m)el.innerHTML=refCard(m)});requestAnimationFrame(()=>drawPremiumBracketLines(board));
+  const final=ms.filter(m=>m[0]!=='third').at(-1),third=ms.find(m=>m[0]==='third');if(!final)return;const c=winner(final[0],final[2],final[3]),runner=loser(final[0],final[2],final[3]);document.querySelector('#championName').textContent=c;document.querySelector('#runnerUpName').textContent=runner;
 }
-function renderRoster(){const el=document.querySelector('#rosterGrid');if(!el)return;const count=document.querySelector('.roster-count');if(count)count.textContent=`${TEAM_COUNT} TEAMS · MAX 5 PLAYERS / TEAM`;el.innerHTML=state.teams.map((t,i)=>`<article class="roster-card ${t.side}"><div class="roster-head"><div class="mini-crest ${t.side}">${String.fromCharCode(65+i%4)}</div><div><span>MAPENDOS · ${teamLabel(i)}</span><h3>${esc(t.name)}</h3></div></div><div class="players">${t.players.map((p,j)=>{const n=typeof p==='object'?p.name:p;const f=typeof p==='object'?p.side:'';return `<div><span class="num">0${j+1}</span><b>${esc(n||'TBD')}</b><em class="${f}">${f?f.toUpperCase():''}</em></div>`}).join('')}</div></article>`).join('')}
+function drawDoubleElimLines(board){
+  const old=board.querySelector('.bracket-lines-ref');if(old)old.remove();
+  const svgNS='http://www.w3.org/2000/svg',svg=document.createElementNS(svgNS,'svg');svg.classList.add('bracket-lines-ref');svg.setAttribute('aria-hidden','true');svg.setAttribute('width','100%');svg.setAttribute('height','100%');svg.innerHTML='<defs><filter id="deGlow"><feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+  const br=board.getBoundingClientRect(),rel=e=>{const r=e.getBoundingClientRect();return{x:r.left-br.left,y:r.top-br.top,w:r.width,h:r.height}};
+  const card=id=>board.querySelector(`[data-match="${id}"] .match-card-ref`), path=(d,stroke='#777b86',w=1.5)=>{const p=document.createElementNS(svgNS,'path');p.setAttribute('d',d);p.setAttribute('fill','none');p.setAttribute('stroke',stroke);p.setAttribute('stroke-width',w);p.setAttribute('stroke-linecap','round');p.setAttribute('stroke-linejoin','round');svg.appendChild(p)};
+  const connect=(fromIds,toId)=>{const target=card(toId);if(!target)return;const tr=rel(target),tx=tr.x,ty=tr.y+tr.h/2;const sources=fromIds.map(card).filter(Boolean).map(rel);if(!sources.length)return;const sx=Math.max(...sources.map(r=>r.x+r.w)),mx=sx+Math.max(18,(tx-sx)*.5);sources.forEach(r=>path(`M ${r.x+r.w} ${r.y+r.h/2} H ${mx} V ${ty}`));path(`M ${mx} ${ty} H ${tx}`)};
+  [['m1','m4'],['m2','m6'],['m3','m7']].forEach(([a,b])=>connect([a],b));
+  [['m4','m5','m13'],['m6','m7','m14'],['m13','m14','m18'],['m18','m19','m20'],['m10','m6','m12'],['m8','m9','m11'],['m13','m12','m15'],['m14','m11','m16'],['m15','m16','m17'],['m17','m18','m19']].forEach(([a,b,to])=>connect([a,b],to));
+  board.prepend(svg);
+}
+function renderRoster(){
+  const el=document.querySelector('#rosterGrid');if(!el)return;
+  const active=activeTeamIndices(),count=document.querySelector('.roster-count');
+  if(count)count.textContent=`${active.length} TEAMS · UNLIMITED PLAYERS / TEAM`;
+  el.innerHTML=active.map(i=>{const t=state.teams[i];return `<article class="roster-card ${t.side}"><div class="roster-head"><div class="mini-crest ${t.side}">${String.fromCharCode(65+i%4)}</div><div><span>MAPENDOS · ${teamLabel(i)}</span><h3>${esc(t.name)}</h3></div></div><div class="players">${(t.players||[]).map((p,j)=>{const n=typeof p==='object'?p.name:p;const f=typeof p==='object'?p.side:'';return `<div><span class="num">${String(j+1).padStart(2,'0')}</span><b>${esc(n||'TBD')}</b><em class="${f}">${f?f.toUpperCase():''}</em></div>`}).join('')}</div></article>`}).join('');
+}
 function getPlacedPlayers(){
   const list=[];
   state.teams.forEach((t,ti)=>(t.players||[]).forEach((p,pi)=>{
@@ -199,17 +276,10 @@ function getPlacedPlayers(){
 }
 function renderAdminTeams(){
   const el=document.querySelector('#adminTeams');if(!el)return;
-  let idpIdx=0,imeIdx=0;
-  el.innerHTML=state.teams.map((t,i)=>{
-    const players=t.players||[];
-    return `<article class="admin-team mixed"><div class="admin-team-top"><b>${teamLabel(i)}</b><span class="team-status">${players.filter(p=>p&&p.name).length}/5 PLAYERS</span></div><div class="admin-move-search" data-target-team="${i}"><input type="text" class="admin-move-input" autocomplete="off" placeholder="🔍 Cari player untuk pindah ke ${teamLabel(i)}..."><div class="admin-move-suggestions"></div></div><div class="admin-team-player-list">${players.map((p,j)=>{
-      const name=(typeof p==='object'?p.name:p)||'';
-      const side=(typeof p==='object'?p.side:'')||'';
-      const removable=name&&name!=='TBD'&&(side==='idp'||side==='ime');
-      const idx=side==='idp'?idpIdx:side==='ime'?imeIdx:-1;
-      if(removable){if(side==='idp')idpIdx++;else imeIdx++}
-      return `<div class="admin-player"><span>0${j+1}</span><b>${esc(name||'TBD')}</b><em class="${side}">${side?side.toUpperCase():''}</em>${removable?`<button type="button" class="admin-player-remove" data-remove-player="${side}:${idx}" aria-label="Hapus ${esc(name)}">×</button>`:''}</div>`;
-    }).join('')}</div></article>`;
+  const active=activeTeamIndices();let idpIdx=0,imeIdx=0;
+  el.innerHTML=active.map(i=>{
+    const t=state.teams[i],players=t.players||[];
+    return `<article class="admin-team mixed"><div class="admin-team-top"><b>${teamLabel(i)}</b><span class="team-status">${players.filter(p=>p&&p.name).length} PLAYERS</span></div><div class="admin-move-search" data-target-team="${i}"><input type="text" class="admin-move-input" autocomplete="off" placeholder="🔍 Cari player untuk pindah ke ${teamLabel(i)}..."><div class="admin-move-suggestions"></div></div><div class="admin-team-player-list">${players.map((p,j)=>{const name=(typeof p==='object'?p.name:p)||'';const side=(typeof p==='object'?p.side:'')||'';const removable=name&&name!=='TBD'&&(side==='idp'||side==='ime');const idx=side==='idp'?idpIdx:side==='ime'?imeIdx:-1;if(removable){if(side==='idp')idpIdx++;else imeIdx++}return `<div class="admin-player"><span>${String(j+1).padStart(2,'0')}</span><b>${esc(name||'TBD')}</b><em class="${side}">${side?side.toUpperCase():''}</em>${removable?`<button type="button" class="admin-player-remove" data-remove-player="${side}:${idx}" aria-label="Hapus ${esc(name)}">×</button>`:''}</div>`}).join('')}</div></article>`;
   }).join('');
   updateRosterPoolSummary();
 }
@@ -223,7 +293,7 @@ function getPool(){
   }));
   return {idp,ime};
 }
-function updateRosterPoolSummary(){const s=getPool();const el=document.querySelector('#rosterPoolSummary');if(el)el.innerHTML=`<div><span>IDP PARTICIPANTS</span><b>${s.idp.length}</b><small> TOTAL</small></div><div><span>IME PARTICIPANTS</span><b>${s.ime.length}</b><small> TOTAL</small></div><div><span>FORMAT</span><b>5</b><small> PLAYERS / TEAM</small></div>`}
+function updateRosterPoolSummary(){const s=getPool();const el=document.querySelector('#rosterPoolSummary');if(el)el.innerHTML=`<div><span>IDP PARTICIPANTS</span><b>${s.idp.length}</b><small> TOTAL</small></div><div><span>IME PARTICIPANTS</span><b>${s.ime.length}</b><small> TOTAL</small></div><div><span>FORMAT</span><b>∞</b><small> PLAYERS / TEAM</small></div>`}
 function renderParticipantList(){const el=document.querySelector('#participantList');if(!el)return;const s=getPool();const rows=[...s.idp.map((p,i)=>({p,side:'IDP',i})),...s.ime.map((p,i)=>({p,side:'IME',i}))];el.innerHTML=rows.length?rows.map((x,i)=>`<div class="participant-row"><span class="participant-no">${String(i+1).padStart(2,'0')}</span><b>${esc(x.p)}</b><em class="${x.side.toLowerCase()}">${x.side}</em><button type="button" data-remove-player="${x.side}:${x.i}" aria-label="Hapus">×</button></div>`).join(''):`<div class="empty-participants">Belum ada peserta.</div>`}
 function openRosterModal(){document.querySelector('#rosterModal')?.classList.add('show');renderParticipantList();document.querySelector('#rosterName')?.focus()}
 function closeRosterModal(){document.querySelector('#rosterModal')?.classList.remove('show')}
@@ -238,9 +308,10 @@ function teamHasBanned(team,name){
 }
 function distributeToTeams(idpPool,imePool){
   const total=idpPool.length+imePool.length;
-  const teamCount=Math.min(TEAM_COUNT,Math.ceil(total/5));
+  const existingCount=activeTeamIndices().length;
+  const teamCount=Math.min(MAX_TEAMS,Math.max(1,existingCount>=2?existingCount:Math.ceil(total/5)));
   const ratio=total?idpPool.length/total:0;
-  const sizes=Array.from({length:teamCount},(_,i)=>Math.min(5,total-i*5));
+  const sizes=Array.from({length:teamCount},(_,i)=>Math.ceil((total-i)/Math.max(1,teamCount-i)));
 
   // Target IDP count per team from the global roster ratio, using largest-remainder
   // rounding so every team's target is as close as possible to the true ratio
@@ -333,7 +404,7 @@ async function movePlayerBetweenTeams(fromTeam,fromIdx,toTeam){
   const player=source.players[fromIdx];
   if(!player)return;
   const playerName=(typeof player==='object'?player.name:player)||'';
-  if(target.players.length<5){
+  if(target.players.length<Infinity){
     // There's a free slot in the target team — just move the player there.
     source.players.splice(fromIdx,1);
     target.players.push(player);
@@ -447,121 +518,31 @@ async function shufflePlayers(){
   }
 }
 function shuffleBracket(){
-  if(!Array.isArray(state.teams) || state.teams.length<2){ alert('Minimal 2 team diperlukan untuk mengocok bracket.'); return; }
-  const order=Array.isArray(state.bracketOrder)&&state.bracketOrder.length===state.teams.length
-    ? [...state.bracketOrder]
-    : state.teams.map((_,i)=>i);
-  for(let i=order.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [order[i],order[j]]=[order[j],order[i]];
-  }
-  state.bracketOrder=order;
-  state.winners={};
-  state.scores={};
-  save();
-  renderAll();
-  const note=document.querySelector('#bracketShuffleNote');
-  if(note){
-    note.textContent='Bracket berhasil dikocok. Pasangan Round 1 diacak ulang tanpa memindahkan roster dari team masing-masing.';
-    note.classList.remove('warn');
-    note.classList.add('success');
-  }
+  const active=activeTeamIndices();
+  if(active.length<2){alert('Minimal 2 team diperlukan untuk mengocok bracket.');return}
+  const order=active.slice();
+  for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]]}
+  state.bracketOrder=order;state.winners={};state.scores={};save();renderAll();
+  const note=document.querySelector('#bracketShuffleNote');if(note){note.textContent=`Bracket ${active.length} team berhasil dikocok. Pairing Round 1 diacak tanpa memindahkan roster.`;note.classList.remove('warn');note.classList.add('success')}
 }
 function renderResults(){
   const el=document.querySelector('#resultGrid');if(!el)return;
-  const ms=matches();
-  const rounds={};
-  ms.filter(m=>m[0]!=='third').forEach(m=>{const r=m[0].match(/^r(\d+)/)?.[1]||'1';(rounds[r]??=[]).push(m)});
-  const roundKeys=Object.keys(rounds).sort((a,b)=>+a-+b);
+  const count=activeTeamIndices().length;
+  if(count>=9){
+    const g=matchGroups();
+    const col=(title,key,cls)=>`<div class="bracket-column ${cls}"><div class="col-title">${title}</div>${g[key].map(m=>`<div class="match-slot" data-match="${m[0]}">${refCard(m,true)}</div>`).join('')}</div>`;
+    el.className='result-grid result-bracket result-double-elim';
+    el.innerHTML=`<div class="bracket-reference-board double-elim-board admin-double-board"><div class="de-winners">${col('ROUND 1','wb1','de-r1')}${col('ROUND 2','wb2','de-r2')}${col('ROUND 3','wb3','de-r3')}${col('SEMIFINALS','wbsf','de-sf')}${col('FINALS','gf','de-gf')}</div><div class="de-losers">${col('LOSERS ROUND 1','lb1','de-lb1')}${col('LOSERS ROUND 2','lb2','de-lb2')}${col('LOSERS ROUND 3','lb3','de-lb3')}${col('LOSERS ROUND 4','lb4','de-lb4')}${col('LOSERS ROUND 5','lb5','de-lb5')}</div><div class="bracket-lines-ref" aria-hidden="true"></div></div>`;
+    el.querySelectorAll('[data-result-win]').forEach(b=>b.onclick=()=>{const k=b.dataset.resultWin,t=b.dataset.resultTeam;if(!t||t==='TBD')return;state.winners[k]=state.winners[k]===t?'':t;invalidate(k);save();renderAll()});
+    requestAnimationFrame(()=>drawDoubleElimLines(el.querySelector('.double-elim-board')));
+    const gf=g.gf.find(m=>m[0]==='m20'),reset=g.gf.find(m=>m[0]==='m21');
+    return;
+  }
+  const ms=matches(),rounds={};ms.filter(m=>m[0]!=='third').forEach(m=>{const r=m[0].match(/^r(\d+)/)?.[1]||'1';(rounds[r]??=[]).push(m)});const keys=Object.keys(rounds).sort((a,b)=>+a-+b);
   el.className='result-grid result-bracket';
-  const third=ms.find(m=>m[0]==='third');
-  el.innerHTML=`<div class="bracket-reference-board admin-result-board">
-    ${roundKeys.map((r,idx)=>`<div class="bracket-round round-${idx===0?'q':idx===roundKeys.length-1?'g':'s'}" data-round="${r}"><div class="col-title">${idx===roundKeys.length-1?'GRAND FINAL':idx===roundKeys.length-2?'SEMI FINAL':idx===roundKeys.length-3?'QUARTER FINAL':'ROUND OF 16'}</div>${rounds[r].map(m=>`<div class="match-slot">${refCard(m,true)}</div>`).join('')}</div>`).join('')}
-    <div class="champion-reference"><span>CHAMPION</span><div>🏆</div><strong>${esc((()=>{const finalRound=rounds[roundKeys.at(-1)]?.[0];return finalRound?winner(finalRound[0],finalRound[2],finalRound[3]):'TBD'})())}</strong><small>JUARA 1</small></div>
-  </div>
-  <div class="admin-third-place">
-    <div class="third-place-head"><div><span>PLACEMENT MATCH</span><h4>3RD PLACE MATCH</h4><small>Perebutan Juara 3 &amp; 4 — pemenang mendapat JUARA 3, yang kalah JUARA 4.</small></div><b>🥉</b></div>
-    <div class="third-place-card">${third?refCard(third,true):''}</div>
-  </div>`;
+  el.innerHTML=`<div class="bracket-reference-board admin-result-board">${keys.map((r,idx)=>`<div class="bracket-round round-${idx===0?'q':idx===keys.length-1?'g':'s'}" data-round="${r}"><div class="col-title">${['QUARTER FINAL','SEMI FINAL','GRAND FINAL'][idx]||'ROUND '+r}</div>${rounds[r].map(m=>`<div class="match-slot">${refCard(m,true)}</div>`).join('')}</div>`).join('')}</div>`;
+  el.querySelectorAll('[data-result-win]').forEach(b=>b.onclick=()=>{const k=b.dataset.resultWin,t=b.dataset.resultTeam;if(!t||t==='TBD')return;state.winners[k]=state.winners[k]===t?'':t;invalidate(k);save();renderAll()});
   requestAnimationFrame(()=>drawPremiumBracketLines(el.querySelector('.bracket-reference-board')));
-  el.querySelectorAll('[data-result-win]').forEach(b=>b.onclick=()=>{
-    const k=b.dataset.resultWin,t=b.dataset.resultTeam;if(!t||t==='TBD')return;
-    state.winners[k]=state.winners[k]===t?'':t;invalidate(k);save();renderAll();
-  });
-}
-
-window.addEventListener('resize',()=>{const b=document.querySelector('.bracket-reference-board');if(b)drawPremiumBracketLines(b)});
-function getAllRosterPlayers(){
-  const rows=[];
-  state.teams.forEach(team=>(team.players||[]).forEach(player=>{
-    const name=typeof player==='object'?player.name:player;
-    const side=typeof player==='object'?player.side:'';
-    if(!name||name==='TBD')return;
-    rows.push({name,side:side||'mixed',team:team.name||'TBD'});
-  }));
-  return rows;
-}
-function getKillsMatches(){
-  if(!state.killsRanking||typeof state.killsRanking!=='object')state.killsRanking=clone(DEFAULT.killsRanking);
-  if(!Array.isArray(state.killsRanking.matches))state.killsRanking.matches=[];
-  return state.killsRanking.matches;
-}
-function rosterLookup(name){
-  const q=String(name||'').trim().toLowerCase();
-  return getAllRosterPlayers().find(p=>p.name.toLowerCase()===q)||null;
-}
-function aggregateKills(){
-  const map=new Map();
-  getKillsMatches().forEach(m=>(m.entries||[]).forEach(e=>{
-    const name=String(e?.name||'').trim(); if(!name)return;
-    const key=name.toLowerCase();
-    const cur=map.get(key)||{name,kills:0,team:String(e?.team||''),side:String(e?.side||'')};
-    cur.kills+=Math.max(0,Math.floor(Number(e?.kills)||0));
-    map.set(key,cur);
-  }));
-  return [...map.values()];
-}
-function renderKillsTotalTable(){
-  const el=document.querySelector('#killsTotalTable'); if(!el)return;
-  const ranked=aggregateKills().sort((a,b)=>b.kills-a.kills||a.name.localeCompare(b.name));
-  el.innerHTML=ranked.length ? `<div class="kills-total-row kills-total-row-head"><span>#</span><span>PLAYER</span><span>TOTAL KILL</span></div>${ranked.map((p,i)=>`<div class="kills-total-row"><span>${String(i+1).padStart(2,'0')}</span><div><b>${esc(p.name)}</b>${p.team||p.side?`<small>${esc(p.team||'MAPENDOS')}${p.side?' · '+esc(p.side.toUpperCase()):''}</small>`:''}</div><strong>${p.kills}</strong></div>`).join('')}` : '<div class="kills-total-empty">Belum ada data total kill.</div>';
-}
-function renderKillsRanking(){
-  const board=document.querySelector('#killsRankingBoard');if(!board)return;
-  const ranked=aggregateKills().sort((a,b)=>b.kills-a.kills||a.name.localeCompare(b.name)).slice(0,5),k=state.killsRanking||{};
-  board.innerHTML=ranked.length?ranked.map((p,i)=>{
-    const side=(p.side||'').toUpperCase(), cls=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other';
-    return `<article class="kill-card ${cls}"><div class="kill-card-top"><span class="kill-rank">${String(i+1).padStart(2,'0')}</span><span class="kill-kpg">${p.kills} TOTAL KILL</span></div><div class="kill-avatar"><div class="esport-silhouette" aria-hidden="true"><i></i><b></b></div></div><div class="kill-card-bottom"><div><strong>${esc(p.name)}</strong><small>${esc(p.team||'MAPENDOS')}${side?' · '+esc(side):''}</small></div><b>${p.kills}</b></div></article>`;
-  }).join(''):`<div class="kills-empty">Belum ada data kills.</div>`;
-  renderKillsTotalTable();
-  const meta=document.querySelector('#killsMatchMeta');if(meta)meta.innerHTML=`<span>${esc(k.weekLabel||'WEEK 1')}</span><b>${esc(k.seasonLabel||'REGULAR SEASON')}</b><em>${esc(k.matchLabel||'ALL MATCHES')}</em>`;
-
-  const table=document.querySelector('#killsAdminTable');
-  if(table){const matches=getKillsMatches();table.innerHTML=matches.length?matches.map((m,mi)=>`<div class="kills-match-block"><div class="kills-match-head"><div><span>MATCH ${mi+1}</span><b>${esc(m.matchLabel)}</b></div><button type="button" data-remove-kills-match="${mi}">HAPUS MATCH</button></div><div class="kills-match-entries">${(m.entries||[]).map((p,pi)=>`<div class="kills-admin-row"><span>0${pi+1}</span><div><b>${esc(p.name)}</b><small>${esc(p.team)} · ${(p.side||'').toUpperCase()}</small></div><strong>${p.kills}</strong><button type="button" data-remove-kills-entry="${mi}:${pi}">×</button></div>`).join('')}</div></div>`).join(''):`<div class="kills-empty">Belum ada match. Tambahkan 1–5 player per match.</div>`}
-  const a=document.querySelector('#killsMatchLabel');if(a)a.value=k.matchLabel||'';const w=document.querySelector('#killsWeekLabel');if(w)w.value=k.weekLabel||'';const se=document.querySelector('#killsSeasonLabel');if(se)se.value=k.seasonLabel||'';
-}
-function bindKillsAdmin(){
-  const add=()=>{
-    const mi=document.querySelector('#killsInputMatch'),pi=document.querySelector('#killsInputPlayer'),ki=document.querySelector('#killsInputKills'),matchLabel=mi?.value.trim()||'MATCH 1',playerName=pi?.value.trim(),raw=String(ki?.value||'').trim(),kills=Math.max(0,Math.floor(Number(raw)||0));
-    if(!playerName){alert('Ketik nama player.');return} if(!raw){alert('Masukkan jumlah kill.');return}
-    const matches=getKillsMatches();let match=matches.find(m=>m.matchLabel.toLowerCase()===matchLabel.toLowerCase());
-    if(!match){match={matchLabel,entries:[]};matches.push(match)}
-    if(match.entries.some(e=>e.name.toLowerCase()===playerName.toLowerCase())){alert('Player tersebut sudah ada di match ini.');return}
-    if(match.entries.length>=5){alert('Maksimal 5 Top Kill untuk setiap match.');return}
-    match.entries.push({name:playerName,kills,team:'',side:''});state.killsRanking.matchLabel=matchLabel;save();renderKillsRanking();if(pi)pi.value='';if(ki)ki.value='';pi?.focus();
-  };
-  document.querySelector('#addKillsEntry')?.addEventListener('click',add);
-  document.querySelector('#killsInputPlayer')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add()}});
-  document.querySelector('#killsInputKills')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add()}});
-  document.querySelector('#saveKillsRanking')?.addEventListener('click',()=>{state.killsRanking.matchLabel=document.querySelector('#killsMatchLabel')?.value.trim()||'ALL MATCHES';state.killsRanking.weekLabel=document.querySelector('#killsWeekLabel')?.value.trim()||'WEEK 1';state.killsRanking.seasonLabel=document.querySelector('#killsSeasonLabel')?.value.trim()||'REGULAR SEASON';save();renderKillsRanking()});
-  document.querySelector('#killsAdminTable')?.addEventListener('click',e=>{const rm=e.target.closest('[data-remove-kills-match]'),re=e.target.closest('[data-remove-kills-entry]');if(rm){const i=+rm.dataset.removeKillsMatch;if(confirm('Hapus seluruh data match ini?')){getKillsMatches().splice(i,1);save();renderKillsRanking()}}if(re){const [mi,pi]=re.dataset.removeKillsEntry.split(':').map(Number);getKillsMatches()[mi]?.entries.splice(pi,1);save();renderKillsRanking()}});
-}
-function renderStats(){const el=document.querySelector('#adminStats');if(!el)return;const played=Object.keys(state.winners).length,ms=matches(),gf=ms.find(m=>m[0]==='r4m1');const pools=getPool();const champion=gf?winner(gf[0],gf[2],gf[3]):'TBD';el.innerHTML=`<div><span>IDP PARTICIPANTS</span><b>${pools.idp.length}</b></div><div><span>IME PARTICIPANTS</span><b>${pools.ime.length}</b></div><div><span>TEAMS</span><b>${state.teams.length}</b></div><div><span>MATCHES PLAYED</span><b>${played}</b></div><div><span>CHAMPION</span><b>${esc(champion)}</b></div>`}
-function invalidate(k){
-  const ms=matches(),idx=ms.findIndex(m=>m[0]===k);
-  if(idx<0)return;
-  // Any later match may depend on this winner; clear everything after it.
-  ms.slice(idx+1).forEach(m=>{delete state.winners[m[0]];delete state.scores[m[0]]});
 }
 function bindResults(){document.querySelectorAll('[data-win]').forEach(b=>b.onclick=()=>{const k=b.dataset.win,t=b.dataset.team;if(t==='TBD')return;state.winners[k]=state.winners[k]===t?'':t;invalidate(k);save();renderAll()});document.querySelectorAll('[data-score]').forEach(i=>i.onchange=()=>{const[k,n]=i.dataset.score.split(':');const v=i.value===''?'':Math.max(0,+i.value);state.scores[k]=state.scores[k]||['',''];state.scores[k][+n]=v;if(state.scores[k][0]!==''&&state.scores[k][1]!==''&&state.scores[k][0]!==state.scores[k][1]){const m=matches().find(x=>x[0]===k);state.winners[k]=state.scores[k][0]>state.scores[k][1]?m[2]:m[3];invalidate(k)}save();renderAll()})}
 function bindAdminTeamInputs(){/* roster is managed from the single modal */}
@@ -608,7 +589,7 @@ function setupBannedSystem(){
     removeBannedPlayer(btn.dataset.removeBanned);
   });
 }
-function updateShuffleButton(){const b=document.querySelector('#shufflePlayers');if(!b)return;const s=getPool(),total=s.idp.length+s.ime.length;b.disabled=false;b.title=total>=TEAM_COUNT*5?'Roster sudah 80 player — KOCOK tetap bisa digunakan untuk mengacak ulang.':'';b.textContent='⤨ KOCOK PLAYER'}
+function updateShuffleButton(){const b=document.querySelector('#shufflePlayers');if(!b)return;const s=getPool(),total=s.idp.length+s.ime.length;b.disabled=false;b.title='KOCOK PLAYER akan membagi seluruh player ke team aktif tanpa batas 5 player.';b.textContent='⤨ KOCOK PLAYER'}
 function renderAll(){renderBracket();renderRoster();renderAdminTeams();renderResults();renderStats();renderLive();renderBannedOptions();renderBannedList();updateShuffleButton();renderKillsRanking()}
 function setupNav(){const nav=document.querySelector('#mainNav'),menu=document.querySelector('#menu');if(menu&&nav)menu.onclick=()=>nav.classList.toggle('open');document.querySelectorAll('#mainNav a').forEach(a=>a.onclick=()=>nav?.classList.remove('open'))}
 function setupRosterModal(){
