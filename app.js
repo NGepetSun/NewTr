@@ -366,19 +366,6 @@ async function shufflePlayers(){
   }
 }
 function shuffleBracket(){
-  if(note){
-    const idpPer=Math.round(5*idp.length/total),imePer=5-idpPer;
-    if(res.impossible){
-      note.textContent=`Shuffle selesai, tetapi ${state.banned.filter(n=>idp.includes(n)||ime.includes(n)).length} player banned melebihi ${Math.min(TEAM_COUNT,Math.ceil(total/5))} team yang tersedia. Sebagian harus bertemu karena secara matematis tidak mungkin dipisahkan semua.`;
-    }else if(res.conflict){
-      note.textContent=`Shuffle selesai, tetapi constraint banned belum dapat dipenuhi pada percobaan ini. Coba KOCOK lagi.`;
-    }else{
-      note.textContent=`Shuffle selesai. Komposisi mengikuti rasio roster: sekitar ${idpPer} IDP + ${imePer} IME / team. Semua player di Banned Player dipisahkan agar tidak satu team.`;
-    }
-    note.classList.toggle('success',!res.conflict&&!res.impossible);note.classList.toggle('warn',res.conflict||res.impossible);
-  }
-}
-function shuffleBracket(){
   if(!Array.isArray(state.teams) || state.teams.length<2){ alert('Minimal 2 team diperlukan untuk mengocok bracket.'); return; }
   const order=Array.isArray(state.bracketOrder)&&state.bracketOrder.length===state.teams.length
     ? [...state.bracketOrder]
@@ -567,6 +554,7 @@ function setupAdminLogin(){
       sessionStorage.setItem('mapendos-admin-password',password);
       gate.classList.add('hidden'); gate.setAttribute('aria-hidden','true'); if(err)err.textContent='';
       if(typeof setupAdmin==='function') setupAdmin();
+      if(typeof setupRosterModal==='function') setupRosterModal();
       if(typeof setupBannedSystem==='function') setupBannedSystem();
       if(typeof bindKillsAdmin==='function') bindKillsAdmin();
       renderAll(); renderParticipantList(); loadRemoteState();
