@@ -191,9 +191,18 @@ function renderRoster(){const el=document.querySelector('#rosterGrid');if(!el)re
 function renderAdminTeams(){
   const el=document.querySelector('#adminTeams');if(!el)return;
   let idpIdx=0,imeIdx=0;
+  // Flat list of every currently-assigned player with their location, used to build
+  // each team's "pindahkan player ke sini" dropdown (manual override of the shuffle).
+  const allPlaced=[];
+  state.teams.forEach((t,ti)=>(t.players||[]).forEach((p,pi)=>{
+    const name=(typeof p==='object'?p.name:p)||'';
+    const side=(typeof p==='object'?p.side:'')||'';
+    if(name)allPlaced.push({name,side,ti,pi});
+  }));
   el.innerHTML=state.teams.map((t,i)=>{
     const players=t.players||[];
-    return `<article class="admin-team mixed"><div class="admin-team-top"><b>${teamLabel(i)}</b><span class="team-status">${players.filter(p=>p&&p.name).length}/5 PLAYERS</span></div><div class="admin-team-player-list">${players.map((p,j)=>{
+    const moveOptions=allPlaced.filter(p=>p.ti!==i).map(p=>`<option value="${p.ti}:${p.pi}">${esc(p.name)} · ${p.side?p.side.toUpperCase():''} (di ${teamLabel(p.ti)})</option>`).join('');
+    return `<article class="admin-team mixed"><div class="admin-team-top"><b>${teamLabel(i)}</b><span class="team-status">${players.filter(p=>p&&p.name).length}/5 PLAYERS</span></div><div class="admin-team-manual-move"><select class="admin-move-into" data-target-team="${i}"><option value="">+ Pindahkan player ke ${teamLabel(i)}...</option>${moveOptions}</select></div><div class="admin-team-player-list">${players.map((p,j)=>{
       const name=(typeof p==='object'?p.name:p)||'';
       const side=(typeof p==='object'?p.side:'')||'';
       const removable=name&&name!=='TBD'&&(side==='idp'||side==='ime');
@@ -315,6 +324,42 @@ function applyDistribution(idpPool,imePool){
   const res=distributeToTeams(idpPool,imePool);
   state.teams=Array.from({length:TEAM_COUNT},(_,i)=>({name:teamLabel(i),side:'mixed',players:res.teams[i]||[]}));
   return res;
+}
+async function movePlayerBetweenTeams(fromTeam,fromIdx,toTeam){
+  fromTeam=Number(fromTeam);fromIdx=Number(fromIdx);toTeam=Number(toTeam);
+  if(!Number.isInteger(fromTeam)||!Number.isInteger(fromIdx)||!Number.isInteger(toTeam)||fromTeam===toTeam)return;
+  const source=state.teams[fromTeam],target=state.teams[toTeam];
+  if(!source||!target)return;
+  const player=source.players[fromIdx];
+  if(!player)return;
+  const playerName=(typeof player==='object'?player.name:player)||'';
+  if(target.players.length<5){
+    // There's a free slot in the target team — just move the player there.
+    source.players.splice(fromIdx,1);
+    target.players.push(player);
+  }else{
+    // Target team is already full: ask which of its players should swap places,
+    // so the faction counts on both teams stay exactly as the admin intends.
+    const list=target.players.map((p,idx)=>{
+      const n=(typeof p==='object'?p.name:p)||'TBD';
+      const s=(typeof p==='object'?p.side:'')||'';
+      return `${idx+1}. ${n}${s?` (${s.toUpperCase()})`:''}`;
+    }).join('\n');
+    const answer=prompt(`${teamLabel(toTeam)} sudah penuh (5/5). Ketik nomor player yang mau ditukar dengan ${playerName}:\n\n${list}`);
+    if(answer===null)return;
+    const slot=Number(answer)-1;
+    if(!Number.isInteger(slot)||slot<0||slot>=target.players.length){
+      alert('Nomor tidak valid. Pemindahan dibatalkan.');
+      return;
+    }
+    const displaced=target.players[slot];
+    target.players[slot]=player;
+    source.players[fromIdx]=displaced;
+  }
+  state.bracketOrder=[];
+  state.winners={};state.scores={};
+  await save();
+  renderAll();renderParticipantList();
 }
 function addParticipants(names,side){
   const clean=names.split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean);
@@ -577,6 +622,12 @@ function setupRosterModal(){
   document.querySelector('#shufflePlayers')?.addEventListener('click',shufflePlayers); document.querySelector('#removeAllPlayers')?.addEventListener('click',removeAllParticipants);
   document.querySelector('#participantList')?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-player]');if(!b)return;const [side,index]=b.dataset.removePlayer.split(':');if(confirm(`Hapus player ${side}?\n\nPlayer akan dihapus dari roster dan team.`))removeParticipant(side,index)});
   document.querySelector('#adminTeams')?.addEventListener('click',e=>{const b=e.target.closest('[data-remove-player]');if(!b)return;const [side,index]=b.dataset.removePlayer.split(':');const name=b.getAttribute('aria-label')?.replace('Hapus ','')||'player ini';if(confirm(`Hapus ${name} dari roster dan team?\n\nTeam akan dikocok ulang otomatis.`))removeParticipant(side,index)});
+  document.querySelector('#adminTeams')?.addEventListener('change',e=>{
+    const sel=e.target.closest('.admin-move-into');if(!sel||!sel.value)return;
+    const [fromTeam,fromIdx]=sel.value.split(':');
+    const toTeam=sel.dataset.targetTeam;
+    movePlayerBetweenTeams(fromTeam,fromIdx,toTeam);
+  });
 }
 function setupAdminLogin(){
   const gate=document.querySelector('#adminLogin'); if(!gate)return true;

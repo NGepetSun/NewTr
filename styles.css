@@ -467,6 +467,10 @@ footer i{color:var(--gold-2);margin:0 10px}
 .admin-player-remove{flex:0 0 auto;width:22px;height:22px;line-height:1;border:1px solid var(--line-strong);
   background:var(--surface-3);color:#c98a95;cursor:pointer;font-size:13px;padding:0}
 .admin-player-remove:hover{border-color:var(--idp);color:var(--idp);background:var(--idp-dim)}
+.admin-team-manual-move{margin-bottom:10px}
+.admin-move-into{width:100%;background:var(--surface-2);border:1px dashed var(--line-strong);color:var(--gold);padding:7px 8px;font:600 9px 'Chakra Petch',sans-serif;letter-spacing:.3px;outline:0;cursor:pointer}
+.admin-move-into:hover{border-color:var(--gold)}
+.admin-move-into option{color:#e2e3ea;background:var(--surface-2)}
 
 .result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .admin-card{border:1px solid var(--line);padding:16px;background:var(--surface)}
